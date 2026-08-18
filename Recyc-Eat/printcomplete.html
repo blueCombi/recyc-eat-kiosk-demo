@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Printing Complete</title>
+  <link rel="stylesheet" href="printcomplete.css" />
+</head>
+<body>
+  <div class="page-container">
+    <header class="brand-header">
+      <img src="logo.png" class="brand-logo" alt="EcoNova Logo">
+    </header>
+
+    <main class="content-wrapper">
+      <!-- LEFT SECTION -->
+      <div class="left-section">
+        <div class="title-section">
+          <h1>Printing <span class="accent-green">Complete!</span></h1>
+          <p class="subtitle">See you soon!</p>
+        </div>
+
+        <div class="printer-illustration">
+          <span class="sparkle sparkle-left" aria-hidden="true">✦</span>
+          <span class="sparkle sparkle-right" aria-hidden="true">✦</span>
+          
+          <div class="printer-body">
+            <div class="printer-top"></div>
+            <div class="printer-container">
+              <div class="printer-front">
+                <div class="printer-screen"></div>
+                <div class="paper-output">
+                  <div class="receipt-paper">
+                    <svg class="qr-display" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg">
+                      <rect x="5" y="5" width="50" height="50" fill="white" stroke="#333" stroke-width="1"/>
+                      <rect x="8" y="8" width="12" height="12" fill="#333"/>
+                      <rect x="40" y="8" width="12" height="12" fill="#333"/>
+                      <rect x="8" y="40" width="12" height="12" fill="#333"/>
+                      <rect x="22" y="22" width="16" height="16" fill="white" stroke="#999" stroke-width="0.5"/>
+                      <circle cx="30" cy="30" r="3" fill="#2fb965"/>
+                    </svg>
+                  </div>
+                </div>
+              </div>
+              <div class="power-light"></div>
+            </div>
+          </div>
+
+          <span class="leaf leaf-left" aria-hidden="true"></span>
+          <span class="leaf leaf-right" aria-hidden="true"></span>
+        </div>
+
+        <div class="thank-you-section">
+          <h2>Thank you for recycling<br>with Recyc-Eat!</h2>
+          <div class="earth-character">
+            <div class="earth-globe">
+              <div class="earth-face">
+                <span class="earth-eye eye-left">●</span>
+                <span class="earth-eye eye-right">●</span>
+                <span class="earth-smile">‿</span>
+              </div>
+              <span class="earth-leaf leaf-top" aria-hidden="true"></span>
+              <span class="earth-leaf leaf-bottom" aria-hidden="true"></span>
+            </div>
+            <span class="heart-emoji" aria-hidden="true">❤️</span>
+          </div>
+          <p class="impact-text">Your recyclable waste<br>helped make a difference.</p>
+        </div>
+      </div>
+
+      <!-- RIGHT SECTION: RECEIPT CARD -->
+      <div class="right-section">
+        <div class="receipt-card">
+          <div class="receipt-header">
+            <img src="logo.png" class="receipt-logo" alt="EcoNova">
+            <h3>THANK YOU!</h3>
+            <p class="receipt-subtitle">You're helping the environment<br>and earning rewards!</p>
+          </div>
+
+          <div class="receipt-body">
+            <div class="receipt-line">
+              <span class="label">DATE</span>
+              <span class="value" id="receiptDate">May 14, 2025 02:45 PM</span>
+            </div>
+            <div class="receipt-line">
+              <span class="label">RECEIPT ID</span>
+              <span class="value receipt-id" id="receiptId">EM-20250514-0245-001</span>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="receipt-section">
+              <div class="section-title">ITEMS RECYCLED</div>
+              <div class="item-list">
+                <div class="item">
+                  <div class="item-info">
+                    <span class="item-icon">🥤</span>
+                    <span class="item-name">Plastic Bottle</span>
+                  </div>
+                  <div class="item-points">
+                    <span class="item-qty">2x</span>
+                    <span class="item-pts">+10 pts</span>
+                  </div>
+                </div>
+                <div class="item">
+                  <div class="item-info">
+                    <span class="item-icon">🥫</span>
+                    <span class="item-name">Aluminum Can</span>
+                  </div>
+                  <div class="item-points">
+                    <span class="item-qty">1x</span>
+                    <span class="item-pts">+5 pts</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="points-summary">
+              <div class="summary-line">
+                <span>POINTS EARNED</span>
+                <span class="earned-points">15</span>
+              </div>
+              <div class="summary-line total">
+                <span>TOTAL POINTS</span>
+                <span class="total-points">125</span>
+              </div>
+            </div>
+
+            <div class="section-divider"></div>
+
+            <div class="qr-section">
+              <div class="qr-label">SCAN TO REDEEM</div>
+              <svg class="qr-code-large" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                <rect x="8" y="8" width="84" height="84" fill="white" stroke="#1a5156" stroke-width="2"/>
+                <rect x="12" y="12" width="20" height="20" fill="#1a5156"/>
+                <rect x="68" y="12" width="20" height="20" fill="#1a5156"/>
+                <rect x="12" y="68" width="20" height="20" fill="#1a5156"/>
+                <circle cx="50" cy="50" r="4" fill="#2fb965"/>
+                <path d="M30 50 L50 30 L70 50 L50 70 Z" fill="none" stroke="#2fb965" stroke-width="1.5"/>
+              </svg>
+              <p class="qr-instruction">Show this QR code to<br>redeem your rewards.</p>
+            </div>
+
+            <div class="receipt-footer">Every recycle makes a difference</div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div class="wave-background" aria-hidden="true"></div>
+  </div>
+
+  <!-- Voucher notice at bottom -->
+  <footer class="voucher-notice">
+    <div class="notice-icon">
+      <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <rect x="4" y="5" width="16" height="14" rx="2" fill="none" stroke="#1a8f7d" stroke-width="1.5"/>
+        <line x1="6" y1="9" x2="18" y2="9" stroke="#1a8f7d" stroke-width="1"/>
+        <line x1="6" y1="12" x2="14" y2="12" stroke="#1a8f7d" stroke-width="1"/>
+      </svg>
+    </div>
+    <div class="notice-text">
+      <strong>Don't forget your voucher!</strong>
+      <span>Present the QR code receipt when you redeem your reward.</span>
+    </div>
+    <div class="mini-qr" aria-hidden="true">
+      <svg viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+        <rect x="2" y="2" width="28" height="28" fill="white" stroke="#1a5156" stroke-width="1"/>
+        <rect x="4" y="4" width="8" height="8" fill="#1a5156"/>
+        <rect x="20" y="4" width="8" height="8" fill="#1a5156"/>
+        <rect x="4" y="20" width="8" height="8" fill="#1a5156"/>
+        <circle cx="16" cy="16" r="2" fill="#2fb965"/>
+      </svg>
+    </div>
+  </footer>
+</body>
+</html>

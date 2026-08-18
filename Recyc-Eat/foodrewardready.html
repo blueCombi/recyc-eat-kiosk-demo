@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Food Reward Ready</title>
+  <link rel="stylesheet" href="foodrewardready.css" />
+</head>
+<body>
+  <div class="page-container">
+    <header class="brand-header">
+      <img src="logo.png" class="brand-logo" alt="EcoNova Logo">
+    </header>
+
+    <main class="content-area">
+      <!-- SUCCESS CHECKMARK -->
+      <div class="success-circle">
+        <span class="checkmark">✓</span>
+      </div>
+
+      <!-- TITLE -->
+      <h1 class="title">Food Reward Ready!</h1>
+
+      <!-- MESSAGE -->
+      <p class="message">Please get your food from the<br>dispenser.</p>
+
+      <!-- THANK YOU CARD -->
+      <div class="thank-you-card">
+        <div class="card-header">
+          <img src="logo.png" class="card-logo" alt="EcoNova">
+        </div>
+
+        <div class="card-content">
+          <h2>Thank you for recycling<br>with Recyc-Eat!</h2>
+          <p class="card-message">Your recyclable waste<br>helped make a difference.</p>
+
+          <div class="earth-character">
+            <div class="earth-globe">
+              <div class="earth-face">
+                <span class="earth-eye">●</span>
+                <span class="earth-eye">●</span>
+                <div class="earth-smile">‿</div>
+              </div>
+              <span class="earth-leaf leaf-top"></span>
+              <span class="earth-leaf leaf-bottom"></span>
+            </div>
+            <span class="heart">❤️</span>
+          </div>
+        </div>
+
+        <div class="card-footer">
+          <span class="redirect-icon">🏠</span>
+          <span class="redirect-text">Redirecting to home screen...</span>
+        </div>
+      </div>
+    </main>
+
+    <div class="wave-background" aria-hidden="true"></div>
+  </div>
+
+  <script>
+    // Redirect to home screen after 3 seconds
+    setTimeout(function() {
+      window.location.href = 'recycling.html';
+    }, 3000);
+  </script>
+</body>
+</html>

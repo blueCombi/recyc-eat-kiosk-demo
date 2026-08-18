@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dispensing Food Reward</title>
+  <link rel="stylesheet" href="dispensingfood.css" />
+</head>
+<body>
+  <div class="page-container">
+    <header class="brand-header">
+      <img src="logo.png" class="brand-logo" alt="EcoNova Logo">
+    </header>
+
+    <main class="content-area">
+      <!-- VENDING MACHINE ILLUSTRATION -->
+      <div class="vending-machine">
+        <div class="machine-body">
+          <div class="machine-top">
+            <div class="machine-brand">EcoNova</div>
+          </div>
+          
+          <div class="machine-window">
+            <div class="machine-interior">
+              <div class="food-item">
+                <div class="can">
+                  <div class="can-label">
+                    <div class="label-text">CANNED</div>
+                    <div class="label-text">FOOD</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="machine-light" id="machineLight"></div>
+          </div>
+
+          <div class="machine-bottom">
+            <div class="dispense-slot"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATUS TEXT -->
+      <h1 class="status-title">Dispensing Food Reward...</h1>
+      <p class="status-message">Please wait...</p>
+
+      <!-- LOADING DOTS -->
+      <div class="loading-dots">
+        <span class="dot dot-1"></span>
+        <span class="dot dot-2"></span>
+        <span class="dot dot-3"></span>
+        <span class="dot dot-4"></span>
+      </div>
+    </main>
+
+    <div class="wave-background" aria-hidden="true"></div>
+  </div>
+
+  <script>
+    // Redirect to food reward ready page after 4 seconds (dispensing time)
+    setTimeout(function() {
+      window.location.href = 'foodrewardready.html';
+    }, 4000);
+  </script>
+</body>
+</html>
