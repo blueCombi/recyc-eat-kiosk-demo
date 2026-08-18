@@ -88,28 +88,7 @@
 
             <div class="receipt-section">
               <div class="section-title">ITEMS RECYCLED</div>
-              <div class="item-list">
-                <div class="item">
-                  <div class="item-info">
-                    <span class="item-icon">🥤</span>
-                    <span class="item-name">Plastic Bottle</span>
-                  </div>
-                  <div class="item-points">
-                    <span class="item-qty">2x</span>
-                    <span class="item-pts">+10 pts</span>
-                  </div>
-                </div>
-                <div class="item">
-                  <div class="item-info">
-                    <span class="item-icon">🥫</span>
-                    <span class="item-name">Aluminum Can</span>
-                  </div>
-                  <div class="item-points">
-                    <span class="item-qty">1x</span>
-                    <span class="item-pts">+5 pts</span>
-                  </div>
-                </div>
-              </div>
+              <div class="item-list" id="itemList"></div>
             </div>
 
             <div class="section-divider"></div>
@@ -117,11 +96,11 @@
             <div class="points-summary">
               <div class="summary-line">
                 <span>POINTS EARNED</span>
-                <span class="earned-points">15</span>
+                <span class="earned-points" id="earnedPoints">0</span>
               </div>
               <div class="summary-line total">
                 <span>TOTAL POINTS</span>
-                <span class="total-points">125</span>
+                <span class="total-points" id="totalPoints">0</span>
               </div>
             </div>
 
@@ -150,6 +129,82 @@
   </div>
 
   <script>
+    (function () {
+      var POINTS_BOTTLE = 5;
+      var POINTS_CAN = 3;
+
+      function readCount(key) {
+        var value = parseInt(localStorage.getItem(key), 10);
+        return isNaN(value) || value < 0 ? 0 : value;
+      }
+
+      function formatDate(date) {
+        return date.toLocaleString("en-US", {
+          month: "long",
+          day: "numeric",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+      }
+
+      function formatReceiptId(date) {
+        var pad = function (n) {
+          return String(n).padStart(2, "0");
+        };
+        return (
+          "EM-" +
+          date.getFullYear() +
+          pad(date.getMonth() + 1) +
+          pad(date.getDate()) +
+          "-" +
+          pad(date.getHours()) +
+          pad(date.getMinutes()) +
+          "-001"
+        );
+      }
+
+      function addItemRow(listEl, icon, name, count, pointsEach) {
+        if (count <= 0) return;
+        var row = document.createElement("div");
+        row.className = "item";
+        row.innerHTML =
+          '<div class="item-info">' +
+          '<span class="item-icon">' + icon + "</span>" +
+          '<span class="item-name">' + name + "</span>" +
+          "</div>" +
+          '<div class="item-points">' +
+          '<span class="item-qty">' + count + "x</span>" +
+          '<span class="item-pts">+' + count * pointsEach + " pts</span>" +
+          "</div>";
+        listEl.appendChild(row);
+      }
+
+      var now = new Date();
+      var bottles = readCount("recycEatBottles");
+      var cans = readCount("recycEatCans");
+      var totalPoints = readCount("recycEatPoints");
+      var earnedPoints = bottles * POINTS_BOTTLE + cans * POINTS_CAN;
+      var itemList = document.getElementById("itemList");
+
+      document.getElementById("receiptDate").textContent = formatDate(now);
+      document.getElementById("receiptId").textContent = formatReceiptId(now);
+      document.getElementById("earnedPoints").textContent = earnedPoints;
+      document.getElementById("totalPoints").textContent = totalPoints;
+
+      addItemRow(itemList, "🥤", "Plastic Bottle", bottles, POINTS_BOTTLE);
+      addItemRow(itemList, "🥫", "Thin Can", cans, POINTS_CAN);
+
+      if (bottles === 0 && cans === 0) {
+        var empty = document.createElement("div");
+        empty.className = "item";
+        empty.innerHTML =
+          '<div class="item-info"><span class="item-name">No items recorded</span></div>';
+        itemList.appendChild(empty);
+      }
+    })();
+
     setTimeout(function () {
       window.location.href = "recycling.html";
     }, 10000);

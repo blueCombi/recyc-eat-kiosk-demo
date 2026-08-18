@@ -34,18 +34,7 @@
           <h2>Thank you for recycling<br>with Recyc-Eat!</h2>
           <p class="card-message">Your recyclable waste<br>helped make a difference.</p>
 
-          <div class="earth-character">
-            <div class="earth-globe">
-              <div class="earth-face">
-                <span class="earth-eye">●</span>
-                <span class="earth-eye">●</span>
-                <div class="earth-smile">‿</div>
-              </div>
-              <span class="earth-leaf leaf-top"></span>
-              <span class="earth-leaf leaf-bottom"></span>
-            </div>
-            <span class="heart">❤️</span>
-          </div>
+          <img src="thankyoupic.png" alt="Thank you for recycling" class="thank-you-pic">
         </div>
 
         <div class="card-footer">
@@ -60,6 +49,8 @@
 
   <script>
     localStorage.setItem("recycEatPoints", "0");
+    localStorage.setItem("recycEatBottles", "0");
+    localStorage.setItem("recycEatCans", "0");
     setTimeout(function() {
       window.location.href = "recycling.html";
     }, 3000);

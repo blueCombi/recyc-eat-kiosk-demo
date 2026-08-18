@@ -384,10 +384,12 @@ html, body {
 }
 
 .receipt-header {
-  background: linear-gradient(135deg, #f0f9f8 0%, #e8f6f3 100%);
+  background: #ffffff;
   padding: 16px;
   text-align: center;
-  border-bottom: 1px solid rgba(14, 122, 125, 0.2);
+  border: 2px solid var(--green-500);
+  border-radius: 10px;
+  margin: 12px 12px 0;
 }
 
 .receipt-logo {

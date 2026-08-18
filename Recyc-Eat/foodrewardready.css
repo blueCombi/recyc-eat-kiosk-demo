@@ -22,7 +22,7 @@ html, body {
   padding: 0;
   min-height: 100vh;
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: linear-gradient(180deg, #f8fdfb 0%, #ffffff 60%);
+  background: #ffffff;
   color: var(--text-dark);
   overflow-x: hidden;
 }
@@ -162,87 +162,13 @@ html, body {
   line-height: 1.4;
 }
 
-/* ===== EARTH CHARACTER ===== */
-.earth-character {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  margin: 12px 0;
-}
-
-.earth-globe {
-  position: relative;
-  width: 70px;
-  height: 70px;
-  background: linear-gradient(135deg, #4fbfae, #1fa28f);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px rgba(31, 162, 143, 0.25);
-}
-
-.earth-face {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-}
-
-.earth-eye {
-  font-size: 14px;
-  color: #0c2a27;
-  animation: blink 3s ease-in-out infinite;
-}
-
-.earth-eye:nth-of-type(2) {
-  animation-delay: 0.1s;
-}
-
-@keyframes blink {
-  0%, 95%, 100% { opacity: 1; }
-  96%, 98% { opacity: 0; }
-}
-
-.earth-smile {
-  font-size: 18px;
-  color: #0c2a27;
-}
-
-.earth-leaf {
-  position: absolute;
-  width: 16px;
-  height: 12px;
-  background: var(--green-500);
-  border-radius: 50% 0;
-  opacity: 0.9;
-}
-
-.leaf-top {
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-25deg);
-}
-
-.leaf-bottom {
-  bottom: -4px;
-  right: 6px;
-  transform: rotate(115deg);
-}
-
-.heart {
-  font-size: 24px;
-  animation: heartBeat 1.5s ease-in-out infinite;
-}
-
-@keyframes heartBeat {
-  0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.15); }
+.thank-you-pic {
+  display: block;
+  width: 140px;
+  max-width: 70%;
+  height: auto;
+  margin: 8px auto 4px;
+  object-fit: contain;
 }
 
 /* ===== CARD FOOTER ===== */
@@ -274,14 +200,7 @@ html, body {
 
 /* ===== WAVE BACKGROUND ===== */
 .wave-background {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 200px;
-  background: linear-gradient(180deg, transparent 0%, rgba(79, 191, 174, 0.12) 40%, rgba(79, 191, 174, 0.22) 100%);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .wave-background::before {
@@ -340,13 +259,8 @@ html, body {
     font-size: 1rem;
   }
 
-  .earth-globe {
-    width: 60px;
-    height: 60px;
-  }
-
-  .heart {
-    font-size: 20px;
+  .thank-you-pic {
+    width: 110px;
   }
 
   .card-footer {

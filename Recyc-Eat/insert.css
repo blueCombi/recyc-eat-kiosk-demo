@@ -102,9 +102,40 @@ html,body{height:100%;margin:0;font-family:"Segoe UI", Roboto, "Helvetica Neue",
 .waiting{margin-top:18px;font-weight:700;color:#111;font-size:24px}
 
 /* cancel button */
-.controls{position:fixed;right:32px;bottom:28px;z-index:6}
+.controls{position:fixed;right:32px;bottom:54px;z-index:6}
 .btn-cancel{display:inline-flex;align-items:center;gap:8px;padding:12px 22px;border-radius:26px;border:3px solid var(--teal-700);background:#fff;color:var(--teal-700);font-weight:800;text-decoration:none;box-shadow:0 6px 0 rgba(0,0,0,0.06);font-size:22px}
 .btn-cancel .x{display:inline-block;width:22px;height:22px;border-radius:50%;border:2px solid var(--teal-700);text-align:center;line-height:18px;font-weight:700}
+
+.info-bar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  background: #e7ead8;
+  color: #2c3a2e;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.info-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #3b82c4;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 800;
+  font-style: italic;
+  flex-shrink: 0;
+}
 
 /* animation keyframes */
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}

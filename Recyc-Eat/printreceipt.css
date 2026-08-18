@@ -21,7 +21,7 @@ html, body {
   padding: 0;
   min-height: 100vh;
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: linear-gradient(180deg, #f8fdfb 0%, #ffffff 60%);
+  background: #ffffff;
   color: var(--text-dark);
   overflow-x: hidden;
 }
@@ -282,14 +282,7 @@ html, body {
 
 /* ===== WAVE BACKGROUND ===== */
 .wave-background {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 180px;
-  background: linear-gradient(180deg, transparent 0%, rgba(79, 191, 174, 0.15) 40%, rgba(79, 191, 174, 0.25) 100%);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 .wave-background::before {
