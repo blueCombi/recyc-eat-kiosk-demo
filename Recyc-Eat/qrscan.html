@@ -12,8 +12,14 @@
       <img src="logo.png" alt="EcoNova logo" class="brand-logo" />
     </header>
 
-    <div class="qr-badge" aria-hidden="true">
-      <svg viewBox="0 0 120 120" class="qr-svg" role="img" aria-label="QR code icon">
+    <div class="qr-scanner" role="status" aria-live="polite" aria-label="Waiting to scan QR code">
+      <div class="qr-badge">
+        <span class="scan-corner scan-corner-tl" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-tr" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-bl" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-br" aria-hidden="true"></span>
+        <span class="scan-line" aria-hidden="true"></span>
+        <svg viewBox="0 0 120 120" class="qr-svg" role="img" aria-label="QR code icon">
         <rect x="0" y="0" width="120" height="120" rx="18" fill="#f3f7f5"/>
         <g fill="#0b7b79">
           <rect x="18" y="18" width="18" height="18"/>
@@ -47,6 +53,8 @@
           <rect x="78" y="78" width="6" height="6"/>
         </g>
       </svg>
+      </div>
+      <p class="scan-status">Waiting to scan<span class="loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></p>
     </div>
 
     <h1>Scan Your <span>QR</span> code Receipt</h1>
@@ -140,5 +148,11 @@
       CANCEL <span class="cancel-icon">×</span>
     </a>
   </div>
+
+  <script>
+    setTimeout(function () {
+      window.location.href = "qrreceived.html";
+    }, 10000);
+  </script>
 </body>
 </html>

@@ -38,25 +38,25 @@
       <!-- POINTS RING -->
       <div class="points-ring-container">
         <div class="ring-wrapper">
-          <div class="dot-ring" aria-label="Points ring display">
-            <span class="dot" style="--index: 0;"></span>
-            <span class="dot" style="--index: 1;"></span>
-            <span class="dot" style="--index: 2;"></span>
-            <span class="dot" style="--index: 3;"></span>
-            <span class="dot" style="--index: 4;"></span>
-            <span class="dot" style="--index: 5;"></span>
-            <span class="dot" style="--index: 6;"></span>
-            <span class="dot" style="--index: 7;"></span>
-            <span class="dot" style="--index: 8;"></span>
-            <span class="dot" style="--index: 9;"></span>
-            <span class="dot" style="--index: 10;"></span>
-            <span class="dot" style="--index: 11;"></span>
+          <div class="dot-ring" aria-hidden="true">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
           </div>
 
           <div class="points-center">
             <div class="points-label">Total Points</div>
             <div class="points-value">
-              20<span class="star">★</span>
+              <span id="totalPoints">0</span><span class="star">★</span>
             </div>
           </div>
         </div>
@@ -89,7 +89,7 @@
           <span class="btn-icon">✕</span>
           <span>CANCEL</span>
         </button>
-        <button class="btn btn-primary" onclick="window.location.href='insert.html'">
+        <button class="btn btn-primary" onclick="window.location.href='itemaccepted.html'">
           <span class="btn-icon">♻</span>
           <span>Continue Recycling</span>
         </button>
@@ -98,5 +98,13 @@
 
     <div class="wave-background" aria-hidden="true"></div>
   </div>
+
+  <script>
+    (function () {
+      var total = parseInt(localStorage.getItem("recycEatPoints"), 10);
+      if (isNaN(total) || total < 0) total = 0;
+      document.getElementById("totalPoints").textContent = total;
+    })();
+  </script>
 </body>
 </html>

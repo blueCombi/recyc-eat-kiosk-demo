@@ -1,66 +1,155 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Item Accepted</title>
-    <link rel="stylesheet" href="itemaccepted.css" />
-  </head>
-  <body>
-    <div class="leaf-layer" aria-hidden="true">
-      <span class="leaf leaf-1"></span>
-      <span class="leaf leaf-2"></span>
-      <span class="leaf leaf-3"></span>
-      <span class="leaf leaf-4"></span>
-      <span class="leaf leaf-5"></span>
-      <span class="leaf leaf-6"></span>
-    </div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Item Accepted</title>
+  <link rel="stylesheet" href="itemaccepted.css">
+</head>
+<body>
+  <div class="page-backdrop" aria-hidden="true"></div>
 
-    <div class="page-shell">
-      <header class="header" aria-label="EcoNova brand">
-        <img src="logo.png" class="logo" alt="EcoNova logo" />
-      </header>
+  <div class="page">
+    <header class="brand">
+      <img src="logo.png" class="logo" alt="EcoNova">
+    </header>
 
-      <main class="acceptance-panel">
-        <div class="success-check" aria-label="Accepted">✓</div>
+    <main class="content">
+      <div class="status">
+        <div class="check-circle" aria-hidden="true">✓</div>
+        <h1 class="title">ITEM ACCEPTED!</h1>
+        <p class="gain">+<span id="gainValue">5</span> points!</p>
+      </div>
 
-        <h1>ITEM ACCEPTED!</h1>
-        <div class="score-gain">+5 points!</div>
-
-        <div class="score-ring" aria-label="Current total points: 20">
-          <div class="ring-orbit" aria-hidden="true">
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-            <span class="dot"></span>
-          </div>
-
-          <div class="score-center">
-            <div class="score-label">Total Points</div>
-            <div class="score-number">20<span class="star">★</span></div>
+      <button type="button" class="points-ring" id="pointsRing" aria-label="Add 5 points">
+        <div class="dot-orbit" aria-hidden="true">
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+          <span class="dot"></span>
+        </div>
+        <div class="points-center">
+          <div class="points-label">Total Points</div>
+          <div class="points-value">
+            <span id="totalPoints">0</span><span class="star">★</span>
           </div>
         </div>
-
-        <div class="item-tag" aria-label="Plastic Bottle item type">
-          <img src="bottle.png" class="item-icon" alt="Plastic bottle icon" />
-          <span>Plastic Bottle</span>
-        </div>
-      </main>
-
-      <button class="finish-bar" type="button" aria-label="Finish" onclick="window.location.href='notenoughpointspage.html'">
-        <span>Finish</span>
-        <span class="finish-check">✓</span>
       </button>
 
-      <div class="helper-text">Insert a plastic bottle or thin can.</div>
-    </div>
-  </body>
+      <button type="button" class="item-row" id="itemToggle" aria-label="Change accepted item">
+        <img src="plasticbottle.png" alt="Plastic bottle" class="item-icon" id="itemIcon">
+        <span class="item-badge" id="itemBadge">Plastic Bottle</span>
+      </button>
+    </main>
+  </div>
+
+  <a href="notenoughpoints.html" class="btn-finish" id="btnFinish" role="button">Finish <span class="check">✓</span></a>
+
+  <footer class="info-bar">
+    <span class="info-icon" aria-hidden="true">i</span>
+    <span>Insert a plastic bottle or thin can to begin.</span>
+  </footer>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = "recycEatPoints";
+      var POINTS_BOTTLE = 5;
+      var POINTS_CAN = 3;
+      var REWARD_POINTS = 50;
+      var CAN_IMAGE = "canwitname.png";
+      var totalEl = document.getElementById("totalPoints");
+      var gainEl = document.getElementById("gainValue");
+      var ring = document.getElementById("pointsRing");
+      var finishBtn = document.getElementById("btnFinish");
+      var itemToggle = document.getElementById("itemToggle");
+      var itemIcon = document.getElementById("itemIcon");
+      var itemBadge = document.getElementById("itemBadge");
+      var rewardRedirect = null;
+      var itemType = "bottle";
+      var pointsForItem = POINTS_BOTTLE;
+
+      function readPoints() {
+        var value = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+        return isNaN(value) || value < 0 ? 0 : value;
+      }
+
+      function savePoints(total) {
+        localStorage.setItem(STORAGE_KEY, String(total));
+      }
+
+      function render(total, gain) {
+        totalEl.textContent = total;
+        gainEl.textContent = gain;
+        totalEl.parentElement.classList.remove("pop");
+        void totalEl.parentElement.offsetWidth;
+        totalEl.parentElement.classList.add("pop");
+      }
+
+      function goToReward() {
+        if (rewardRedirect) return;
+        rewardRedirect = setTimeout(function () {
+          window.location.href = "dispensingfood.html";
+        }, 900);
+      }
+
+      function addPoints(amount) {
+        var total = readPoints() + amount;
+        savePoints(total);
+        render(total, amount);
+        if (total >= REWARD_POINTS) goToReward();
+      }
+
+      var total = readPoints();
+      var params = new URLSearchParams(window.location.search);
+      if (params.get("award") === "1") {
+        total += POINTS_BOTTLE;
+        savePoints(total);
+        history.replaceState({}, "", "itemaccepted.html");
+      }
+
+      render(total, pointsForItem);
+      if (total >= REWARD_POINTS) goToReward();
+
+      ring.addEventListener("click", function () {
+        if (rewardRedirect) return;
+        addPoints(pointsForItem);
+      });
+
+      itemToggle.addEventListener("click", function () {
+        if (rewardRedirect) return;
+        if (itemType === "bottle") {
+          itemType = "can";
+          pointsForItem = POINTS_CAN;
+          itemIcon.onerror = function () {
+            this.onerror = null;
+            this.src = "canwithname.png";
+          };
+          itemIcon.src = CAN_IMAGE;
+          itemIcon.alt = "Thin can";
+          itemBadge.textContent = "Thin Can";
+          addPoints(POINTS_CAN);
+        } else {
+          window.location.href = "itemrejected.html";
+        }
+      });
+
+      finishBtn.addEventListener("click", function (event) {
+        event.preventDefault();
+        if (readPoints() >= REWARD_POINTS) {
+          window.location.href = "dispensingfood.html";
+        } else {
+          window.location.href = "notenoughpoints.html";
+        }
+      });
+    })();
+  </script>
+</body>
 </html>

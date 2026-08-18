@@ -49,23 +49,91 @@ body {
   object-fit: contain;
 }
 
+.qr-scanner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 8px auto 0;
+}
+
 .qr-badge {
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.15);
-  border: 2px solid rgba(14, 122, 125, 0.28);
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 18px;
+  background: rgba(255,255,255,0.9);
+  border: 2px solid rgba(14, 122, 125, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 8px auto 0;
-  box-shadow: inset 0 0 0 8px rgba(20, 121, 123, 0.04);
+  overflow: hidden;
+  box-shadow: 0 0 0 6px rgba(14, 122, 125, 0.06);
+  animation: scannerPulse 2s ease-in-out infinite;
 }
 
 .qr-svg {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   display: block;
+  position: relative;
+  z-index: 1;
+}
+
+.scan-line {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 3px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, rgba(14,122,125,0), #1fa28f, rgba(14,122,125,0));
+  box-shadow: 0 0 12px rgba(31, 162, 143, 0.85);
+  z-index: 2;
+  animation: scanSweep 2s linear infinite;
+}
+
+.scan-corner {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 3px solid var(--teal);
+  z-index: 3;
+}
+
+.scan-corner-tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
+.scan-corner-tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; border-radius: 0 4px 0 0; }
+.scan-corner-bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0; border-radius: 0 0 0 4px; }
+.scan-corner-br { bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-radius: 0 0 4px 0; }
+
+.scan-status {
+  margin: 10px 0 0;
+  color: var(--teal-dark);
+  font-weight: 700;
+  font-size: 0.98rem;
+  letter-spacing: 0.02em;
+}
+
+.loading-dots span {
+  animation: dotBlink 1.2s infinite;
+  opacity: 0.2;
+}
+
+.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes scanSweep {
+  0% { top: 14%; }
+  50% { top: 78%; }
+  100% { top: 14%; }
+}
+
+@keyframes scannerPulse {
+  0%, 100% { box-shadow: 0 0 0 6px rgba(14, 122, 125, 0.06); }
+  50% { box-shadow: 0 0 0 10px rgba(14, 122, 125, 0.14); }
+}
+
+@keyframes dotBlink {
+  0%, 100% { opacity: 0.2; }
+  50% { opacity: 1; }
 }
 
 h1 {
@@ -377,8 +445,8 @@ h1 span {
   }
 
   .qr-badge {
-    width: 90px;
-    height: 90px;
+    width: 100px;
+    height: 100px;
   }
 
   .subhead {

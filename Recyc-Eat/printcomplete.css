@@ -23,7 +23,7 @@ html, body {
   padding: 0;
   min-height: 100vh;
   font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: linear-gradient(180deg, #f8fdfb 0%, #ffffff 60%);
+  background: #ffffff;
   color: var(--text-dark);
   overflow-x: hidden;
 }
@@ -247,8 +247,22 @@ html, body {
 
 /* ===== THANK YOU SECTION ===== */
 .thank-you-section {
-  text-align: center;
-  margin-top: 4px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  text-align: left;
+  margin-top: 8px;
+  background: #ffffff;
+  border: 2px solid rgba(14, 122, 125, 0.35);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.06);
+}
+
+.thank-you-copy {
+  flex: 1;
+  min-width: 0;
 }
 
 .thank-you-section h2 {
@@ -259,12 +273,14 @@ html, body {
   line-height: 1.35;
 }
 
-.earth-character {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  margin: 8px 0 10px;
+.thank-you-pic {
+  display: block;
+  width: 150px;
+  max-width: 42%;
+  height: auto;
+  margin: 0;
+  object-fit: contain;
+  flex-shrink: 0;
 }
 
 .earth-globe {
@@ -558,27 +574,20 @@ html, body {
 
 /* ===== WAVE BACKGROUND ===== */
 .wave-background {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 180px;
-  background: linear-gradient(180deg, transparent 0%, rgba(79, 191, 174, 0.15) 40%, rgba(79, 191, 174, 0.25) 100%);
-  pointer-events: none;
-  z-index: 0;
+  display: none;
 }
 
 /* ===== VOUCHER NOTICE ===== */
 .voucher-notice {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
   background: rgba(79, 191, 174, 0.1);
   border: 2px solid rgba(79, 191, 174, 0.35);
   border-radius: 12px;
-  margin: 0 auto;
-  max-width: 600px;
+  margin: 12px 0 0;
+  max-width: 100%;
   position: relative;
   z-index: 2;
 }
@@ -676,6 +685,10 @@ html, body {
     font-size: 1rem;
   }
 
+  .thank-you-pic {
+    width: 110px;
+  }
+
   .earth-globe {
     width: 70px;
     height: 70px;
@@ -687,11 +700,6 @@ html, body {
 
   .receipt-card {
     max-width: 100%;
-  }
-
-  .voucher-notice {
-    flex-direction: column;
-    text-align: center;
   }
 
   .notice-text {
