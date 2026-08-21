@@ -29,20 +29,12 @@
         <p class="gain">+<span id="gainValue">5</span> points!</p>
       </div>
 
-      <button type="button" class="points-ring" id="pointsRing" aria-label="Add 5 points">
+      <button type="button" class="points-ring" id="pointsRing" aria-label="Add points">
         <div class="dot-orbit" aria-hidden="true">
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
-          <span class="dot"></span>
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
+          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
         <div class="points-center">
           <div class="points-label">Total Points</div>
@@ -56,115 +48,137 @@
         <span class="item-box">
           <img src="bottle.png" alt="Plastic bottle" class="item-icon" id="itemIcon">
         </span>
-        <span class="item-badge" id="itemBadge">Plastic Bottle</span>
+        <span class="item-badge" id="itemBadge">Small Plastic Bottle</span>
       </button>
     </main>
   </div>
 
-  <a href="notenoughpoints.html" class="btn-finish" id="btnFinish" role="button">Finish <span class="check">✓</span></a>
+  <a href="#" class="btn-finish" id="btnFinish" role="button">Finish <span class="check">✓</span></a>
 
   <footer class="info-bar">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span>Insert a plastic bottle or thin</span>
+    <span>Insert a plastic bottle or aluminum can to begin.</span>
   </footer>
 
-  <script>
-    (function () {
-      var STORAGE_KEY = "recycEatPoints";
-      var POINTS_BOTTLE = 5;
-      var POINTS_CAN = 3;
-      var REWARD_POINTS = 50;
-      var CAN_IMAGE = "can.png";
-      var totalEl = document.getElementById("totalPoints");
-      var gainEl = document.getElementById("gainValue");
-      var ring = document.getElementById("pointsRing");
-      var finishBtn = document.getElementById("btnFinish");
-      var itemToggle = document.getElementById("itemToggle");
-      var itemIcon = document.getElementById("itemIcon");
-      var itemBadge = document.getElementById("itemBadge");
-      var rewardRedirect = null;
-      var itemType = "bottle";
-      var pointsForItem = POINTS_BOTTLE;
+  <script type="module">
+    import { POINTS, createVoucher, addPoints, scanVoucher } from './firebase-config.js';
 
-      function readPoints() {
-        var value = parseInt(localStorage.getItem(STORAGE_KEY), 10);
-        return isNaN(value) || value < 0 ? 0 : value;
+    // ── item cycle: small bottle → big bottle → aluminum can → rejected
+    const ITEM_TYPES = [
+      { key: "small_bottle", label: "Small Plastic Bottle", pts: POINTS.small_bottle, img: "bottle.png",  alt: "Small plastic bottle" },
+      { key: "big_bottle",   label: "Big Plastic Bottle",   pts: POINTS.big_bottle,   img: "bottle.png",  alt: "Big plastic bottle"   },
+      { key: "aluminum_can", label: "Aluminum Can",          pts: POINTS.aluminum_can, img: "can.png",     alt: "Aluminum can"         },
+    ];
+
+    let itemIndex    = 0;
+    let totalPoints  = 0;
+    let sessionItems = [];   // track items inserted this session
+    let voucherID    = sessionStorage.getItem("voucherID") || null;
+    let redirecting  = false;
+
+    const totalEl   = document.getElementById("totalPoints");
+    const gainEl    = document.getElementById("gainValue");
+    const ring      = document.getElementById("pointsRing");
+    const finishBtn = document.getElementById("btnFinish");
+    const itemToggle= document.getElementById("itemToggle");
+    const itemIcon  = document.getElementById("itemIcon");
+    const itemBadge = document.getElementById("itemBadge");
+
+    // ── render ────────────────────────────────────────────────────
+    function render(total, gain) {
+      totalEl.textContent = total;
+      gainEl.textContent  = gain;
+      totalEl.parentElement.classList.remove("pop");
+      void totalEl.parentElement.offsetWidth;
+      totalEl.parentElement.classList.add("pop");
+    }
+
+    function updateItemUI() {
+      const item      = ITEM_TYPES[itemIndex];
+      itemIcon.src    = item.img;
+      itemIcon.alt    = item.alt;
+      itemBadge.textContent = item.label;
+      gainEl.textContent    = item.pts;
+    }
+
+    // ── go to redeem if enough points ────────────────────────────
+    function checkRedeem(total) {
+      if (total >= POINTS.threshold && !redirecting) {
+        redirecting = true;
+        sessionStorage.setItem("totalPoints", total);
+        setTimeout(() => { window.location.href = "redeemready.html"; }, 900);
       }
+    }
 
-      function savePoints(total) {
-        localStorage.setItem(STORAGE_KEY, String(total));
-      }
-
-      function recordItem(type) {
-        var key = type === "bottle" ? "recycEatBottles" : "recycEatCans";
-        var count = parseInt(localStorage.getItem(key), 10);
-        if (isNaN(count) || count < 0) count = 0;
-        localStorage.setItem(key, String(count + 1));
-      }
-
-      function render(total, gain) {
-        totalEl.textContent = total;
-        gainEl.textContent = gain;
-        totalEl.parentElement.classList.remove("pop");
-        void totalEl.parentElement.offsetWidth;
-        totalEl.parentElement.classList.add("pop");
-      }
-
-      function goToReward() {
-        if (rewardRedirect) return;
-        rewardRedirect = setTimeout(function () {
-          window.location.href = "dispensingfood.html";
-        }, 900);
-      }
-
-      function addPoints(amount, type) {
-        var total = readPoints() + amount;
-        savePoints(total);
-        recordItem(type || itemType);
-        render(total, amount);
-        if (total >= REWARD_POINTS) goToReward();
-      }
-
-      var total = readPoints();
-      var params = new URLSearchParams(window.location.search);
-      if (params.get("award") === "1") {
-        total += POINTS_BOTTLE;
-        savePoints(total);
-        recordItem("bottle");
-        history.replaceState({}, "", "itemaccepted.html");
-      }
-
-      render(total, pointsForItem);
-      if (total >= REWARD_POINTS) goToReward();
-
-      ring.addEventListener("click", function () {
-        if (rewardRedirect) return;
-        addPoints(pointsForItem, itemType);
-      });
-
-      itemToggle.addEventListener("click", function () {
-        if (rewardRedirect) return;
-        if (itemType === "bottle") {
-          itemType = "can";
-          pointsForItem = POINTS_CAN;
-          itemIcon.src = CAN_IMAGE;
-          itemIcon.alt = "Thin can";
-          itemBadge.textContent = "Thin Can";
-          addPoints(POINTS_CAN, "can");
-        } else {
-          window.location.href = "itemrejected.html";
+    // ── load initial state ────────────────────────────────────────
+    async function init() {
+      // if returning user scanned a QR, load from Firebase
+      const returnID = sessionStorage.getItem("returnVoucherID");
+      if (returnID) {
+        const result = await scanVoucher(returnID);
+        if (result.success) {
+          totalPoints = result.total_points;
+          voucherID   = returnID;
+          sessionStorage.removeItem("returnVoucherID");
+          sessionStorage.setItem("voucherID", voucherID);
         }
-      });
+      } else {
+        totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0");
+      }
 
-      finishBtn.addEventListener("click", function (event) {
-        event.preventDefault();
-        if (readPoints() >= REWARD_POINTS) {
-          window.location.href = "dispensingfood.html";
-        } else {
-          window.location.href = "notenoughpoints.html";
-        }
-      });
-    })();
+      render(totalPoints, ITEM_TYPES[0].pts);
+      checkRedeem(totalPoints);
+    }
+
+    // ── add points + save to Firebase ────────────────────────────
+    async function handleAddPoints() {
+      if (redirecting) return;
+      const item = ITEM_TYPES[itemIndex];
+      totalPoints += item.pts;
+
+      // track item in session list
+      const existing = sessionItems.find(i => i.type === item.key);
+      if (existing) { existing.quantity++; existing.points += item.pts; }
+      else          { sessionItems.push({ type: item.key, label: item.label, quantity: 1, points: item.pts }); }
+
+      render(totalPoints, item.pts);
+      sessionStorage.setItem("totalPoints", totalPoints);
+
+      // save to Firebase
+      if (!voucherID) {
+        // first item ever — create new voucher
+        voucherID = await createVoucher(sessionItems, totalPoints);
+        sessionStorage.setItem("voucherID", voucherID);
+      } else {
+        // update existing voucher
+        await addPoints(voucherID, sessionItems, item.pts);
+      }
+
+      checkRedeem(totalPoints);
+    }
+
+    // ── events ────────────────────────────────────────────────────
+    ring.addEventListener("click", handleAddPoints);
+
+    itemToggle.addEventListener("click", function () {
+      if (redirecting) return;
+      itemIndex = (itemIndex + 1) % ITEM_TYPES.length;
+      updateItemUI();
+      handleAddPoints();
+    });
+
+    finishBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+      if (totalPoints >= POINTS.threshold) {
+        sessionStorage.setItem("totalPoints", totalPoints);
+        window.location.href = "redeemready.html";
+      } else {
+        sessionStorage.setItem("totalPoints", totalPoints);
+        window.location.href = "notenoughpoints.html";
+      }
+    });
+
+    init();
   </script>
 </body>
 </html>

@@ -22,16 +22,13 @@
     </header>
 
     <main class="content-area">
-      <!-- TITLE -->
       <h1 class="title">CONGRATULATIONS!</h1>
 
-      <!-- MESSAGE -->
       <div class="message-section">
         <p class="message-text">You have enough points for</p>
         <p class="reward-text">Food Reward!</p>
       </div>
 
-      <!-- POINTS RING -->
       <div class="points-ring-container">
         <div class="ring-wrapper">
           <div class="dot-ring" aria-label="Points ring display">
@@ -52,20 +49,76 @@
           <div class="points-center">
             <div class="points-label">Total Points</div>
             <div class="points-value">
-              25<span class="star">★</span>
+              <!-- dynamic — filled by script below -->
+              <span id="totalPoints">0</span><span class="star">★</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- REDEEM BUTTON -->
-      <button class="btn btn-redeem" onclick="window.location.href='dispensingfood.html'">
+      <!-- reward type selector -->
+      <div class="reward-choice" style="margin-bottom:12px;">
+        <label style="color:#1A2B22;font-weight:600;margin-right:8px;">Choose reward:</label>
+        <select id="rewardType" style="padding:6px 12px;border-radius:8px;border:1px solid #14848B;color:#1A2B22;">
+          <option value="sardines">🐟 Canned Sardines</option>
+          <option value="tuna">🐠 Canned Tuna</option>
+        </select>
+      </div>
+
+      <button class="btn btn-redeem" id="redeemBtn">
         <span class="btn-icon">🎁</span>
         <span>REDEEM</span>
       </button>
+
+      <p id="redeemMsg" style="color:#E24B4A;font-size:13px;margin-top:8px;display:none;"></p>
     </main>
 
     <div class="wave-background" aria-hidden="true"></div>
   </div>
+
+  <script type="module">
+    import { redeemReward } from './firebase-config.js';
+
+    // show real points
+    const total = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+    document.getElementById("totalPoints").textContent = total;
+
+    document.getElementById("redeemBtn").addEventListener("click", async function () {
+      const btn    = this;
+      const msg    = document.getElementById("redeemMsg");
+      const reward = document.getElementById("rewardType").value;
+
+      // check points first before anything
+      if (total < 50) {
+        msg.textContent   = "Not enough points. Need at least 50.";
+        msg.style.display = "block";
+        return;
+      }
+
+      btn.disabled      = true;
+      btn.textContent   = "Processing...";
+
+      let voucherID = sessionStorage.getItem("voucherID");
+
+      // if no voucherID yet, just go straight to dispensing (demo mode)
+      if (!voucherID) {
+        sessionStorage.removeItem("totalPoints");
+        window.location.href = "dispensingfood.html";
+        return;
+      }
+
+      // if voucherID exists, try Firebase
+      const result = await redeemReward(voucherID, reward);
+      if (result.success) {
+        sessionStorage.removeItem("voucherID");
+        sessionStorage.removeItem("totalPoints");
+        window.location.href = "dispensingfood.html";
+      } else {
+        // Firebase failed but points are enough — go anyway for demo
+        sessionStorage.removeItem("totalPoints");
+        window.location.href = "dispensingfood.html";
+      }
+    });
+  </script>
 </body>
 </html>

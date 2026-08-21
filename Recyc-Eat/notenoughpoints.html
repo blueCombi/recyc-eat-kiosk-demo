@@ -25,35 +25,34 @@
       <main class="content" role="main">
         <section class="score-ring" id="scoreRing" aria-label="Current total points">
           <div class="ring-orbit" aria-hidden="true">
-            <div class="dot dot-1"></div>
-            <div class="dot dot-2"></div>
-            <div class="dot dot-3"></div>
-            <div class="dot dot-4"></div>
-            <div class="dot dot-5"></div>
-            <div class="dot dot-6"></div>
-            <div class="dot dot-7"></div>
-            <div class="dot dot-8"></div>
-            <div class="dot dot-9"></div>
-            <div class="dot dot-10"></div>
-            <div class="dot dot-11"></div>
-            <div class="dot dot-12"></div>
+            <div class="dot dot-1"></div><div class="dot dot-2"></div>
+            <div class="dot dot-3"></div><div class="dot dot-4"></div>
+            <div class="dot dot-5"></div><div class="dot dot-6"></div>
+            <div class="dot dot-7"></div><div class="dot dot-8"></div>
+            <div class="dot dot-9"></div><div class="dot dot-10"></div>
+            <div class="dot dot-11"></div><div class="dot dot-12"></div>
           </div>
-
           <div class="score-center">
             <div class="score-label">Total Points</div>
-            <div class="score-number"><span id="totalPoints">0</span><span class="star">★</span></div>
+            <div class="score-number">
+              <span id="totalPoints">0</span><span class="star">★</span>
+            </div>
           </div>
         </section>
 
         <section class="reward-card" aria-label="Reward requirement">
           <img src="image 32.png" class="reward-icon" alt="Canned food" />
           <div class="reward-copy">
-            <div class="reward-points"><span class="points-need" id="rewardNeed">50</span> Points</div>
-            <div class="reward-desc">=1 Canned Foods</div>
+            <div class="reward-points">
+              <span class="points-need" id="rewardNeed">50</span> Points
+            </div>
+            <div class="reward-desc">= 1 Canned Food (Sardines or Tuna)</div>
           </div>
         </section>
 
-        <p class="notice">You need <span id="pointsNeeded">50</span> more points to<br />redeem your food reward.</p>
+        <p class="notice">
+          You need <span id="pointsNeeded">50</span> more points to<br />redeem your food reward.
+        </p>
       </main>
 
       <div class="actions">
@@ -62,7 +61,8 @@
           <span>Continue Recycling</span>
         </a>
 
-        <button class="btn btn-outline" type="button" aria-label="Print QR Receipt" onclick="window.location.href='printreceipt.html'">
+        <button class="btn btn-outline" type="button" aria-label="Print QR Receipt"
+          onclick="window.location.href='printreceipt.html'">
           <img src="image 33.png" alt="Print icon" class="print-icon" />
           <span>Print&nbsp;&nbsp;QR Receipt</span>
         </button>
@@ -71,14 +71,14 @@
 
     <script>
       (function () {
-        var STORAGE_KEY = "recycEatPoints";
         var REWARD_POINTS = 50;
-        var total = parseInt(localStorage.getItem(STORAGE_KEY), 10);
+        // read from sessionStorage (set by itemaccepted.html)
+        var total  = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
         if (isNaN(total) || total < 0) total = 0;
         var needed = Math.max(0, REWARD_POINTS - total);
 
-        document.getElementById("totalPoints").textContent = total;
-        document.getElementById("rewardNeed").textContent = REWARD_POINTS;
+        document.getElementById("totalPoints").textContent  = total;
+        document.getElementById("rewardNeed").textContent   = REWARD_POINTS;
         document.getElementById("pointsNeeded").textContent = needed;
         document.getElementById("scoreRing").setAttribute("aria-label", "Current total points " + total);
       })();
