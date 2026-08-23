@@ -2,62 +2,169 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Scan QR Receipt</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Scan Your QR Code Receipt</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link rel="stylesheet" href="qrscan.css" />
 </head>
 <body>
-  <div class="leaf-layer" aria-hidden="true">
-    <span class="leaf leaf-1"></span>
-    <span class="leaf leaf-2"></span>
-    <span class="leaf leaf-3"></span>
-    <span class="leaf leaf-4"></span>
-    <span class="leaf leaf-5"></span>
-    <span class="leaf leaf-6"></span>
-  </div>
-  <div class="page-backdrop" aria-hidden="true"></div>
-
   <div class="page-shell">
-    <header class="header">
-      <img src="logo.png" class="logo" alt="EcoNova logo" />
+    <header class="brand-wrap" aria-label="EcoNova logo">
+      <img src="logo.png" alt="EcoNova logo" class="brand-logo" />
     </header>
 
-    <main class="content" role="main">
-      <h1 class="title">SCAN YOUR QR RECEIPT</h1>
-      <p class="subtitle">Hold your printed QR receipt in front of the scanner.</p>
-
-      <div class="scan-area" aria-label="QR scanner area">
-        <div class="scan-frame">
-          <div class="corner tl"></div>
-          <div class="corner tr"></div>
-          <div class="corner bl"></div>
-          <div class="corner br"></div>
-          <div class="scan-line"></div>
-        </div>
+    <div class="qr-scanner" role="status" aria-live="polite" aria-label="Waiting to scan QR code">
+      <div class="qr-badge">
+        <span class="scan-corner scan-corner-tl" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-tr" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-bl" aria-hidden="true"></span>
+        <span class="scan-corner scan-corner-br" aria-hidden="true"></span>
+        <span class="scan-line" aria-hidden="true"></span>
+        <svg viewBox="0 0 120 120" class="qr-svg" role="img" aria-label="QR code icon">
+          <rect x="0" y="0" width="120" height="120" rx="18" fill="#f3f7f5"/>
+          <g fill="#0b7b79">
+            <rect x="18" y="18" width="18" height="18"/>
+            <rect x="18" y="54" width="18" height="18"/>
+            <rect x="18" y="90" width="18" height="18"/>
+            <rect x="54" y="18" width="18" height="18"/>
+            <rect x="90" y="18" width="18" height="18"/>
+            <rect x="54" y="54" width="18" height="18"/>
+            <rect x="54" y="90" width="18" height="18"/>
+            <rect x="90" y="54" width="18" height="18"/>
+            <rect x="90" y="90" width="18" height="18"/>
+            <rect x="72" y="72" width="18" height="18"/>
+            <rect x="36" y="72" width="18" height="18"/>
+          </g>
+          <g fill="#0b7b79">
+            <rect x="30" y="30" width="6" height="6"/>
+            <rect x="42" y="30" width="6" height="6"/>
+            <rect x="30" y="42" width="6" height="6"/>
+            <rect x="42" y="42" width="6" height="6"/>
+            <rect x="30" y="66" width="6" height="6"/>
+            <rect x="42" y="66" width="6" height="6"/>
+            <rect x="30" y="78" width="6" height="6"/>
+            <rect x="42" y="78" width="6" height="6"/>
+            <rect x="66" y="30" width="6" height="6"/>
+            <rect x="78" y="30" width="6" height="6"/>
+            <rect x="66" y="42" width="6" height="6"/>
+            <rect x="78" y="42" width="6" height="6"/>
+            <rect x="66" y="66" width="6" height="6"/>
+            <rect x="78" y="66" width="6" height="6"/>
+            <rect x="66" y="78" width="6" height="6"/>
+            <rect x="78" y="78" width="6" height="6"/>
+          </g>
+        </svg>
       </div>
+      <p class="scan-status" id="statusText">Waiting to scan<span class="loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span></p>
+    </div>
 
-      <p class="status-text" id="statusText">Waiting for QR code...</p>
-      <p class="error-text" id="errorText" style="display:none;color:#E24B4A;"></p>
+    <h1>Scan Your <span>QR</span> code Receipt</h1>
+    <p class="subhead">Scan your QR code to continue recycling<br>and redeem your rewards.</p>
 
-      <!-- For demo/testing: manual entry -->
-      <div class="manual-entry" style="margin-top:24px;">
-        <p style="font-size:13px;color:#4E5F57;">Or enter Receipt ID manually:</p>
-        <div style="display:flex;gap:8px;justify-content:center;margin-top:8px;">
-          <input type="text" id="manualID" placeholder="e.g. EM-20260821-1413-001"
-            style="padding:8px 12px;border-radius:8px;border:1px solid #14848B;font-size:13px;width:220px;" />
-          <button id="manualBtn"
-            style="padding:8px 16px;background:#14848B;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;">
-            Load
-          </button>
+    <main class="content-row">
+      <section class="panel left-panel">
+        <h2>How to Scan</h2>
+
+        <div class="instruction">
+          <div class="icon-circle green">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <rect x="24" y="18" width="32" height="42" rx="7" fill="#f0f8f7" stroke="#0d7d7a" stroke-width="3"/>
+              <rect x="30" y="12" width="20" height="8" rx="4" fill="#cfe9e6"/>
+              <rect x="39" y="28" width="2" height="16" rx="1" fill="#0d7d7a"/>
+              <rect x="28" y="44" width="24" height="4" rx="2" fill="#0d7d7a" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="text-block">
+            <strong>1. Present your QR code</strong>
+            <span>Show your QR code on the scanner.</span>
+          </div>
         </div>
-      </div>
+
+        <div class="instruction">
+          <div class="icon-circle green">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <rect x="18" y="18" width="44" height="44" rx="8" fill="#f0f8f7" stroke="#0d7d7a" stroke-width="3"/>
+              <rect x="28" y="28" width="24" height="24" fill="none" stroke="#0d7d7a" stroke-width="3"/>
+              <rect x="34" y="34" width="12" height="12" fill="#0d7d7a" opacity="0.1"/>
+            </svg>
+          </div>
+          <div class="text-block">
+            <strong>2. Align the QR code</strong>
+            <span>Place the QR code within the frame.</span>
+          </div>
+        </div>
+
+        <div class="instruction">
+          <div class="icon-circle green">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <circle cx="40" cy="40" r="20" fill="none" stroke="#0d7d7a" stroke-width="4"/>
+              <path d="M30 40 L36 46 L50 30" fill="none" stroke="#0d7d7a" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="text-block">
+            <strong>3. Wait for confirmation</strong>
+            <span>You will hear a beep once scanned.</span>
+          </div>
+        </div>
+
+        <!-- Manual entry for demo -->
+        <div class="instruction" style="margin-top:16px;flex-direction:column;align-items:flex-start;gap:8px;">
+          <strong style="color:#0c6f72;font-size:0.9rem;">Or enter Receipt ID manually:</strong>
+          <div style="display:flex;gap:8px;width:100%;">
+            <input type="text" id="manualID" placeholder="e.g. EM-20260821-1413-001"
+              style="padding:8px 10px;border-radius:8px;border:1px solid #14848B;font-size:12px;flex:1;" />
+            <button id="manualBtn"
+              style="padding:8px 14px;background:#14848B;color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:12px;">
+              Load
+            </button>
+          </div>
+          <p id="errorText" style="display:none;color:#E24B4A;font-size:12px;margin:0;"></p>
+        </div>
+      </section>
+
+      <aside class="panel right-panel">
+        <div class="tips-header">
+          <div class="bulb-icon">
+            <svg viewBox="0 0 80 80" aria-hidden="true">
+              <path d="M40 15c-14 0-25 11-25 25 0 9 5 16 12 20v6h26v-6c7-4 12-11 12-20 0-14-11-25-25-25zm-8 26c1-6 6-11 12-12v-4h4v4c6 1 11 6 12 12h-28zm14 18h-12v-3h12v3zm0 7h-12v-3h12v3z" fill="#0d7d7a"/>
+            </svg>
+          </div>
+          <span>TIPS</span>
+        </div>
+
+        <ul class="tips-list">
+          <li>Keep the QR code flat and well-lit.</li>
+          <li>Avoid glare or shadows.</li>
+          <li>If the scan fails, try again or clean the code.</li>
+        </ul>
+
+        <div class="leaf-accent" aria-hidden="true"></div>
+
+        <div class="help-box">
+          <div class="machine-icon">
+            <svg viewBox="0 0 120 90" aria-hidden="true">
+              <rect x="18" y="16" width="84" height="58" rx="8" fill="#f0f8f7" stroke="#0d7d7a" stroke-width="4"/>
+              <rect x="38" y="32" width="40" height="30" rx="3" fill="#0d7d7a" opacity="0.12"/>
+              <rect x="46" y="26" width="20" height="10" rx="3" fill="#0d7d7a" opacity="0.7"/>
+              <rect x="32" y="64" width="56" height="8" rx="4" fill="#0d7d7a" opacity="0.6"/>
+              <rect x="84" y="35" width="10" height="22" rx="2" fill="#0d7d7a"/>
+              <rect x="20" y="58" width="80" height="6" rx="3" fill="#0d7d7a" opacity="0.3"/>
+            </svg>
+          </div>
+          <div class="help-text">
+            <strong>Need help?</strong>
+            <span>Our staff is ready to assist you.</span>
+          </div>
+        </div>
+      </aside>
     </main>
 
-    <div class="actions" style="margin-top:24px;">
-      <a href="recycling.html" class="btn btn-outline" role="button">← Back</a>
-    </div>
+    <a href="recycling.html" class="cancel-btn" aria-label="Go back to recycling page">
+      CANCEL <span class="cancel-icon">×</span>
+    </a>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
     import { scanVoucher } from './firebase-config.js';
 
@@ -65,13 +172,12 @@
       const statusText = document.getElementById("statusText");
       const errorText  = document.getElementById("errorText");
 
-      statusText.textContent = "Loading your points...";
+      statusText.innerHTML = "Loading your points" + '<span class="loading-dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
       errorText.style.display = "none";
 
       const result = await scanVoucher(voucherID.trim().toUpperCase());
 
       if (result.success) {
-        // store for use in itemaccepted.html
         sessionStorage.setItem("returnVoucherID", voucherID.trim().toUpperCase());
         sessionStorage.setItem("totalPoints", result.total_points);
         statusText.textContent = "Points loaded! Redirecting...";
@@ -83,7 +189,6 @@
       }
     }
 
-    // manual entry button
     document.getElementById("manualBtn").addEventListener("click", function () {
       const id = document.getElementById("manualID").value;
       if (id.trim()) loadVoucher(id);
