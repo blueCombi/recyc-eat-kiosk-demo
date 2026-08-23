@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Congratulations - Redeem Reward</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="kiosk.css">
   <link rel="stylesheet" href="redeemready.css" />
 </head>
 <body>
@@ -16,105 +17,114 @@
     <span class="leaf leaf-5"></span>
     <span class="leaf leaf-6"></span>
   </div>
+  <div class="kiosk-backdrop" aria-hidden="true"></div>
 
-  <div class="page-container">
-    <header class="brand-header">
-      <img src="logo.png" class="brand-logo" alt="EcoNova Logo">
+  <div class="kiosk-shell">
+    <header class="kiosk-header">
+      <img src="logo.png" class="kiosk-logo" alt="EcoNova">
     </header>
 
-    <main class="content-area">
-      <h1 class="title">CONGRATULATIONS!</h1>
+    <main class="kiosk-main">
+      <ol class="kiosk-progress" aria-label="Recycling progress">
+        <li class="is-done"><span class="step-dot" aria-hidden="true">1</span>Prepare</li>
+        <li class="is-done"><span class="step-dot" aria-hidden="true">2</span>Insert</li>
+        <li class="is-current"><span class="step-dot" aria-hidden="true">3</span>Redeem</li>
+      </ol>
 
-      <div class="message-section">
-        <p class="message-text">You have enough points for</p>
-        <p class="reward-text">Food Reward!</p>
+      <div class="page-heading">
+        <h1 class="kiosk-title redeem-title">Congratulations!</h1>
+        <p class="kiosk-sub">You have enough points for a free canned meal.</p>
       </div>
 
-      <div class="points-ring-container">
-        <div class="ring-wrapper">
-          <div class="dot-ring" aria-label="Points ring display">
-            <span class="dot" style="--index: 0;"></span>
-            <span class="dot" style="--index: 1;"></span>
-            <span class="dot" style="--index: 2;"></span>
-            <span class="dot" style="--index: 3;"></span>
-            <span class="dot" style="--index: 4;"></span>
-            <span class="dot" style="--index: 5;"></span>
-            <span class="dot" style="--index: 6;"></span>
-            <span class="dot" style="--index: 7;"></span>
-            <span class="dot" style="--index: 8;"></span>
-            <span class="dot" style="--index: 9;"></span>
-            <span class="dot" style="--index: 10;"></span>
-            <span class="dot" style="--index: 11;"></span>
+      <div class="redeem-row">
+        <div class="kiosk-ring redeem-ring">
+          <div class="kiosk-ring__orbit" aria-hidden="true">
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
+            <span></span><span></span><span></span><span></span>
           </div>
-
-          <div class="points-center">
-            <div class="points-label">Total Points</div>
-            <div class="points-value">
-              <!-- dynamic — filled by script below -->
-              <span id="totalPoints">0</span><span class="star">★</span>
-            </div>
+          <div class="kiosk-ring__disc">
+            <span class="points-label">Total Points</span>
+            <span class="points-value">
+              <span id="totalPoints">0</span><span class="star" aria-hidden="true">★</span>
+            </span>
           </div>
         </div>
+
+        <section class="kiosk-card reward">
+          <img src="reward.png" alt="" class="reward__art" aria-hidden="true">
+          <h2 class="reward__title">1 free canned meal</h2>
+          <p class="reward__desc">Tuna or sardines, whichever is loaded today.</p>
+          <p class="reward__cost"><strong id="rewardCost">50</strong> points</p>
+        </section>
       </div>
 
-      <button class="btn btn-redeem" id="redeemBtn">
-        <span class="btn-icon">🎁</span>
-        <span>REDEEM</span>
+      <button class="kiosk-btn kiosk-btn--primary kiosk-btn--lg redeem-btn" id="redeemBtn" type="button">
+        <span aria-hidden="true">&#127873;</span>
+        <span id="redeemLabel">REDEEM</span>
       </button>
 
-      <p id="redeemMsg" style="color:#E24B4A;font-size:13px;margin-top:8px;display:none;"></p>
+      <p class="redeem-error" id="redeemMsg" role="alert" hidden></p>
     </main>
-
-    <div class="wave-background" aria-hidden="true"></div>
   </div>
 
+  <footer class="kiosk-info">
+    <span class="info-icon" aria-hidden="true">i</span>
+    <span>Collect your can from the tray below the screen.</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
-    import { redeemReward } from './firebase-config.js';
+    import { POINTS, redeemReward } from './firebase-config.js';
 
     // the kiosk dispenses whichever canned good is loaded, so there is nothing to pick
     const REWARD_TYPE = "canned_food";
 
-    // show real points
-    const total = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+    const button = document.getElementById("redeemBtn");
+    const label  = document.getElementById("redeemLabel");
+    const error  = document.getElementById("redeemMsg");
+
+    let total = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+    if (isNaN(total) || total < 0) total = 0;
+
     document.getElementById("totalPoints").textContent = total;
+    document.getElementById("rewardCost").textContent  = POINTS.threshold;
 
-    document.getElementById("redeemBtn").addEventListener("click", async function () {
-      const btn = this;
-      const msg = document.getElementById("redeemMsg");
+    function dispense() {
+      sessionStorage.removeItem("voucherID");
+      sessionStorage.removeItem("totalPoints");
+      sessionStorage.removeItem("sessionItems");
+      window.location.href = "dispensingfood.html";
+    }
 
-      // check points first before anything
-      if (total < 50) {
-        msg.textContent   = "Not enough points. Need at least 50.";
-        msg.style.display = "block";
+    button.addEventListener("click", async function () {
+      if (total < POINTS.threshold) {
+        error.textContent = `Not enough points. You need ${POINTS.threshold}.`;
+        error.hidden = false;
         return;
       }
 
-      btn.disabled      = true;
-      btn.textContent   = "Processing...";
+      button.disabled = true;
+      error.hidden = true;
+      label.textContent = "Processing...";
 
-      let voucherID = sessionStorage.getItem("voucherID");
+      const voucherID = sessionStorage.getItem("voucherID");
 
-      // if no voucherID yet, just go straight to dispensing (demo mode)
+      // no voucher means the points only ever lived in this session, so
+      // there is nothing to mark redeemed in Firebase
       if (!voucherID) {
-        sessionStorage.removeItem("totalPoints");
-        window.location.href = "dispensingfood.html";
+        dispense();
         return;
       }
 
-      // if voucherID exists, try Firebase
-      const result = await redeemReward(voucherID, REWARD_TYPE);
-      if (result.success) {
-        sessionStorage.removeItem("voucherID");
-        sessionStorage.removeItem("totalPoints");
-        window.location.href = "dispensingfood.html";
-      } else {
-        // Firebase failed but points are enough — go anyway for demo
-        sessionStorage.removeItem("totalPoints");
-        window.location.href = "dispensingfood.html";
+      try {
+        await redeemReward(voucherID, REWARD_TYPE);
+      } catch (err) {
+        // the can is already being released, so never block on the network
       }
+
+      dispense();
     });
   </script>
 </body>
 </html>
-
-

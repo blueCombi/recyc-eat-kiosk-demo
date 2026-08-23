@@ -1,468 +1,295 @@
-:root{
-  --bg: #ffffff;
-  --panel: #f1f3f2;
-  --panel-strong: #eaf4f1;
-  --teal: #0e7a7d;
-  --teal-dark: #0c6f72;
-  --green: #33a45d;
-  --text: #1d2c2b;
-  --muted: #2b4c4d;
-  --wave: #dfeee6;
-}
+/* Scan QR receipt — entry point for returning visitors.
+   Tokens and shared components live in kiosk.css. */
 
-* { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  min-height: 100%;
-  background: var(--bg);
-  font-family: "Segoe UI", Roboto, Arial, sans-serif;
-  color: var(--text);
-  overflow: auto;
-}
-
-body {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-}
-
-.page-shell {
-  width: 100%;
-  max-width: 940px;
-  min-height: auto;
-  position: relative;
-  padding: 20px 24px 22px;
-  overflow: visible;
-}
-
-.brand-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  margin-left: 12px;
-}
-
-.brand-logo {
-  height: 62px;
-  width: auto;
-  object-fit: contain;
-}
-
-.qr-scanner {
+/* scanner sits above the heading, or beside it when height is tight */
+.scan-intro {
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin: 8px auto 0;
+  gap: clamp(var(--sp-2), 1.6vh, var(--sp-4));
 }
 
-.qr-badge {
-  position: relative;
-  width: 108px;
-  height: 108px;
-  border-radius: 18px;
-  background: rgba(255,255,255,0.9);
-  border: 2px solid rgba(14, 122, 125, 0.35);
+/* ── scanner frame ─────────────────────────────────────────── */
+.scanner {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
+  gap: var(--sp-2);
+}
+
+.scanner__frame {
+  --frame: clamp(96px, 15vh, 132px);
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--frame);
+  height: var(--frame);
+  border-radius: var(--r-md);
+  background: var(--teal-050);
+  border: 2px solid var(--teal-100);
   overflow: hidden;
-  box-shadow: 0 0 0 6px rgba(14, 122, 125, 0.06);
   animation: scannerPulse 2s ease-in-out infinite;
 }
 
-.qr-svg {
-  width: 58px;
-  height: 58px;
-  display: block;
-  position: relative;
-  z-index: 1;
+.scanner__qr {
+  width: 52%;
+  height: 52%;
+  color: var(--teal-700);
 }
 
-.scan-line {
+/* sweeping beam reads as "actively scanning" */
+.scanner__beam {
   position: absolute;
-  left: 10%;
-  right: 10%;
+  left: 8%;
+  right: 8%;
   height: 3px;
   border-radius: 3px;
-  background: linear-gradient(90deg, rgba(14,122,125,0), #1fa28f, rgba(14,122,125,0));
+  background: linear-gradient(90deg, transparent, var(--teal-500), transparent);
   box-shadow: 0 0 12px rgba(31, 162, 143, 0.85);
   z-index: 2;
   animation: scanSweep 2s linear infinite;
 }
 
-.scan-corner {
+.scanner__corner {
   position: absolute;
-  width: 18px;
-  height: 18px;
-  border: 3px solid var(--teal);
+  width: 16px;
+  height: 16px;
+  border: 3px solid var(--teal-700);
   z-index: 3;
 }
 
-.scan-corner-tl { top: 8px; left: 8px; border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
-.scan-corner-tr { top: 8px; right: 8px; border-left: 0; border-bottom: 0; border-radius: 0 4px 0 0; }
-.scan-corner-bl { bottom: 8px; left: 8px; border-right: 0; border-top: 0; border-radius: 0 0 0 4px; }
-.scan-corner-br { bottom: 8px; right: 8px; border-left: 0; border-top: 0; border-radius: 0 0 4px 0; }
+.scanner__corner--tl { top: 7px; left: 7px;  border-right: 0; border-bottom: 0; border-radius: 4px 0 0 0; }
+.scanner__corner--tr { top: 7px; right: 7px; border-left: 0;  border-bottom: 0; border-radius: 0 4px 0 0; }
+.scanner__corner--bl { bottom: 7px; left: 7px;  border-right: 0; border-top: 0; border-radius: 0 0 0 4px; }
+.scanner__corner--br { bottom: 7px; right: 7px; border-left: 0;  border-top: 0; border-radius: 0 0 4px 0; }
 
-.scan-status {
-  margin: 10px 0 0;
-  color: var(--teal-dark);
+.scanner__status {
+  margin: 0;
+  font-size: var(--text-sm);
   font-weight: 700;
-  font-size: 0.98rem;
-  letter-spacing: 0.02em;
+  color: var(--teal-700);
 }
 
-.loading-dots span {
+.dots span {
   animation: dotBlink 1.2s infinite;
   opacity: 0.2;
 }
 
-.loading-dots span:nth-child(2) { animation-delay: 0.2s; }
-.loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
 
 @keyframes scanSweep {
-  0% { top: 14%; }
-  50% { top: 78%; }
-  100% { top: 14%; }
+  0%, 100% { top: 12%; }
+  50%      { top: 80%; }
 }
 
 @keyframes scannerPulse {
   0%, 100% { box-shadow: 0 0 0 6px rgba(14, 122, 125, 0.06); }
-  50% { box-shadow: 0 0 0 10px rgba(14, 122, 125, 0.14); }
+  50%      { box-shadow: 0 0 0 10px rgba(14, 122, 125, 0.14); }
 }
 
 @keyframes dotBlink {
   0%, 100% { opacity: 0.2; }
-  50% { opacity: 1; }
+  50%      { opacity: 1; }
 }
 
-h1 {
-  margin: 18px 0 8px;
-  text-align: center;
-  font-weight: 800;
-  font-size: clamp(1.8rem, 2.8vw, 2.7rem);
-  line-height: 1.08;
-  letter-spacing: -1.2px;
-  color: var(--teal);
-}
-
-h1 span {
-  color: var(--teal);
-}
-
-.subhead {
-  margin: 0 auto 22px;
-  text-align: center;
-  font-weight: 600;
-  font-size: clamp(0.98rem, 1.3vw, 1.35rem);
-  line-height: 1.35;
-  color: #1f4d52;
-}
-
-.content-row {
+/* ── two panels ────────────────────────────────────────────── */
+.scan-columns {
   display: grid;
-  grid-template-columns: 1.2fr 1fr;
-  gap: 18px;
-  width: min(100%, 800px);
-  margin: 0 auto;
-  position: relative;
-  z-index: 2;
+  grid-template-columns: 1.35fr 1fr;
+  align-items: start;
+  gap: clamp(var(--sp-3), 2.5vw, var(--sp-5));
+  width: 100%;
+  text-align: left;
 }
 
-.panel {
-  border-radius: 18px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(14, 122, 125, 0.75);
-  box-shadow: 0 0 0 1px rgba(16, 96, 97, 0.02);
+.how-panel,
+.tips-panel {
+  padding: clamp(var(--sp-3), 2vh, var(--sp-5));
 }
 
-.left-panel {
-  padding: 14px 16px 8px;
-  min-height: 300px;
-  background: rgba(255,255,255,0.12);
-}
-
-.left-panel h2 {
-  margin: 4px 0 14px;
-  color: var(--teal);
-  font-size: clamp(1.5rem, 2.2vw, 2.2rem);
-  line-height: 1.1;
-  letter-spacing: -1px;
-}
-
-.instruction {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 12px 0 14px;
-}
-
-.icon-circle {
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(46, 167, 121, 0.13);
-  flex-shrink: 0;
-  border: 2px solid rgba(16, 120, 121, 0.72);
-}
-
-.icon-circle svg {
-  width: 30px;
-  height: 30px;
-}
-
-.text-block {
-  display: flex;
-  flex-direction: column;
-  font-size: 0.9rem;
-  line-height: 1.35;
-  max-width: 300px;
-}
-
-.text-block strong {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--teal-dark);
-  font-size: 0.96rem;
-}
-
-.text-block span {
-  color: #1c4b50;
-}
-
-.right-panel {
-  background: rgba(219, 237, 230, 0.42);
-  padding: 14px 16px 18px;
-  min-height: 300px;
-  position: relative;
-  border-color: rgba(14, 122, 125, 0.7);
-}
-
-.tips-header {
-  display: flex;
-  align-items: center;
-  gap: 10px;
+.panel-title {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--text-lg);
   font-weight: 800;
-  color: var(--teal);
-  font-size: clamp(1.3rem, 1.8vw, 1.9rem);
-  letter-spacing: -0.5px;
-  margin-bottom: 10px;
+  color: var(--teal-700);
 }
 
-.bulb-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 124, 120, 0.08);
-}
-
-.bulb-icon svg {
-  width: 24px;
-  height: 24px;
-}
-
-.tips-list {
+/* ── numbered how-to steps ─────────────────────────────────── */
+.how-steps {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 8px;
+  padding: 0;
   display: grid;
-  gap: 10px;
-  color: var(--text);
-  font-size: 0.92rem;
-  font-weight: 600;
+  gap: clamp(var(--sp-2), 1.4vh, var(--sp-4));
 }
 
-.tips-list li {
+.how-steps li {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.how-icon {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: clamp(38px, 5.5vh, 48px);
+  height: clamp(38px, 5.5vh, 48px);
+  border-radius: 50%;
+  background: var(--teal-050);
+  border: 2px solid var(--teal-100);
+  color: var(--teal-700);
+}
+
+.how-icon svg {
+  width: 60%;
+  height: 60%;
+}
+
+.how-text {
+  display: flex;
+  flex-direction: column;
+  font-size: var(--text-xs);
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+.how-text strong {
+  font-size: var(--text-sm);
+  color: var(--teal-700);
+}
+
+/* ── manual receipt ID entry ───────────────────────────────── */
+.manual {
+  margin-top: clamp(var(--sp-3), 2vh, var(--sp-4));
+  padding-top: clamp(var(--sp-3), 2vh, var(--sp-4));
+  border-top: 1px dashed var(--border);
+}
+
+.manual__label {
+  display: block;
+  margin-bottom: var(--sp-2);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.manual__row {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.manual__input {
+  flex: 1;
+  min-width: 0;
+  min-height: var(--tap);
+  padding: 0 var(--sp-3);
+  font-family: ui-monospace, "SFMono-Regular", "Consolas", monospace;
+  font-size: var(--text-sm);
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--r-sm);
+}
+
+.manual__input:focus {
+  outline: none;
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 4px var(--teal-050);
+}
+
+/* narrower than a full kiosk button so it sits beside the field */
+.manual__btn {
+  flex-shrink: 0;
+  padding: 0 var(--sp-5);
+  font-size: var(--text-base);
+}
+
+.manual__btn:disabled {
+  background: var(--border);
+  box-shadow: none;
+  cursor: default;
+}
+
+.manual__error {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--red-600);
+}
+
+/* ── tips ──────────────────────────────────────────────────── */
+.tips-panel { background: var(--teal-050); }
+
+.tips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-3);
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.tips li {
   position: relative;
   padding-left: 26px;
   line-height: 1.4;
-  color: #21464d;
 }
 
-.tips-list li::before {
+.tips li::before {
   content: "✓";
   position: absolute;
   left: 0;
-  top: 0;
-  color: var(--green);
+  top: -2px;
+  font-size: var(--text-sm);
   font-weight: 900;
-  font-size: 1.2rem;
+  color: var(--green-600);
 }
 
-.leaf-accent {
-  position: absolute;
-  right: 18px;
-  bottom: 14px;
-  width: 96px;
-  height: 66px;
-  background: rgba(125, 189, 154, 0.22);
-  border-radius: 50% 50% 0 50%;
-  transform: rotate(5deg);
-  opacity: 0.7;
-}
-
-.help-box {
-  position: absolute;
-  right: 10px;
-  bottom: 12px;
-  width: min(90%, 300px);
-  background: rgba(18, 120, 122, 0.95);
-  border-radius: 16px 16px 16px 16px;
-  border: 2px solid rgba(12, 96, 98, 0.9);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  box-shadow: 0 8px 18px rgba(17, 143, 129, 0.12);
-}
-
-.machine-icon {
-  width: 72px;
-  height: 54px;
-  flex-shrink: 0;
-}
-
-.machine-icon svg {
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-.help-text {
-  color: white;
-  display: flex;
-  flex-direction: column;
-  font-weight: 700;
-}
-
-.help-text strong {
-  font-size: 0.96rem;
-  margin-bottom: 4px;
-}
-
-.help-text span {
-  font-size: 0.85rem;
-  opacity: 0.95;
-}
-
-.page-shell::before,
-.page-shell::after {
-  content: "";
-  position: absolute;
-  left: -10%;
-  right: -10%;
-  bottom: -54px;
-  height: 140px;
-  background: rgba(156, 214, 178, 0.18);
-  border-radius: 50% 50% 0 0 / 100% 100% 0 0;
-  z-index: 0;
-}
-
-.page-shell::before {
-  background: rgba(156, 214, 178, 0.14);
-  bottom: -24px;
-  height: 116px;
-}
-
-.page-shell::after {
-  background: rgba(164, 216, 186, 0.14);
-  bottom: -38px;
-  height: 124px;
-}
-
-.cancel-btn {
-  position: fixed;
-  right: 28px;
-  bottom: 18px;
-  z-index: 30;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  background: #ffffff;
-  color: var(--teal-dark);
-  border: 2px solid rgba(14, 122, 125, 0.8);
-  border-radius: 28px;
-  padding: 12px 18px 12px 20px;
-  text-decoration: none;
-  font-weight: 800;
-  font-size: 1.15rem;
-  letter-spacing: 0.02em;
-  box-shadow: 0 4px 0 rgba(15, 113, 116, 0.08);
-}
-
-.cancel-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--teal-dark);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.2rem;
-  line-height: 1;
-  font-weight: 800;
-}
-
-@media (max-width: 940px) {
-  .page-shell {
-    padding: 20px 24px 0;
-  }
-
-  .content-row {
+/* ── narrow screens: stack the panels ──────────────────────── */
+@media (max-width: 900px) {
+  .scan-columns {
     grid-template-columns: 1fr;
-  }
-
-  .left-panel, .right-panel {
-    min-height: auto;
-  }
-
-  .help-box {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    width: 100%;
-    margin-top: 16px;
+    max-width: 440px;
+    margin-inline: auto;
   }
 }
 
-@media (max-width: 640px) {
-  html, body {
-    overflow: auto;
+/* ── short screens: recover height step by step ─────────────
+   Every page must fit without scrolling, or the Cancel button
+   ends up hidden under the fixed info bar.
+   ========================================================== */
+@media (max-height: 800px) {
+  .panel-title { margin-bottom: var(--sp-2); }
+  .scanner__status { font-size: var(--text-xs); }
+}
+
+/* turn the scanner + heading into a row: saves the frame's height */
+@media (max-height: 720px) {
+  .scan-intro {
+    flex-direction: row;
+    gap: clamp(var(--sp-3), 3vw, var(--sp-5));
   }
 
-  .page-shell {
-    padding: 18px 16px 28px;
-  }
+  .scan-intro .page-heading { text-align: left; }
+  .scanner__frame { --frame: 88px; }
+}
 
-  .brand-logo {
-    height: 60px;
-  }
+/* drop the step descriptions: the bold titles still carry the steps */
+@media (max-height: 620px) {
+  .kiosk-sub { display: none; }
+  .how-text span { display: none; }
+  .how-icon { width: 34px; height: 34px; }
+  .how-steps { gap: var(--sp-2); }
+  .tips { gap: var(--sp-2); }
+  .manual { margin-top: var(--sp-3); padding-top: var(--sp-3); }
+  .scanner__frame { --frame: 76px; }
+}
 
-  .qr-badge {
-    width: 100px;
-    height: 100px;
-  }
-
-  .subhead {
-    margin-bottom: 18px;
-  }
-
-  .instruction {
-    gap: 12px;
-  }
-
-  .icon-circle {
-    width: 60px;
-    height: 60px;
-  }
-
-  .text-block {
-    font-size: 0.96rem;
-  }
+@media (prefers-reduced-motion: reduce) {
+  .scanner__frame { animation: none; }
+  .scanner__beam  { animation: none; top: 46%; }
+  .dots span      { animation: none; opacity: 1; }
 }

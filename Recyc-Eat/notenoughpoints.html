@@ -1,90 +1,103 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Not Enough Points</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="notenoughpointspage.css" />
-  </head>
-  <body>
-    <div class="leaf-layer" aria-hidden="true">
-      <span class="leaf leaf-1"></span>
-      <span class="leaf leaf-2"></span>
-      <span class="leaf leaf-3"></span>
-      <span class="leaf leaf-4"></span>
-      <span class="leaf leaf-5"></span>
-      <span class="leaf leaf-6"></span>
-    </div>
-    <div class="page-backdrop" aria-hidden="true"></div>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Not Enough Points</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="kiosk.css">
+  <link rel="stylesheet" href="notenoughpointspage.css" />
+</head>
+<body>
+  <div class="leaf-layer" aria-hidden="true">
+    <span class="leaf leaf-1"></span>
+    <span class="leaf leaf-2"></span>
+    <span class="leaf leaf-3"></span>
+    <span class="leaf leaf-4"></span>
+    <span class="leaf leaf-5"></span>
+    <span class="leaf leaf-6"></span>
+  </div>
+  <div class="kiosk-backdrop" aria-hidden="true"></div>
 
-    <div class="page-shell">
-      <header class="header" aria-label="EcoNova brand">
-        <img src="logo.png" class="logo" alt="EcoNova logo" />
-      </header>
+  <div class="kiosk-shell">
+    <header class="kiosk-header">
+      <img src="logo.png" class="kiosk-logo" alt="EcoNova">
+    </header>
 
-      <main class="content" role="main">
-        <section class="score-ring" id="scoreRing" aria-label="Current total points">
-          <div class="ring-orbit" aria-hidden="true">
-            <div class="dot dot-1"></div><div class="dot dot-2"></div>
-            <div class="dot dot-3"></div><div class="dot dot-4"></div>
-            <div class="dot dot-5"></div><div class="dot dot-6"></div>
-            <div class="dot dot-7"></div><div class="dot dot-8"></div>
-            <div class="dot dot-9"></div><div class="dot dot-10"></div>
-            <div class="dot dot-11"></div><div class="dot dot-12"></div>
-          </div>
-          <div class="score-center">
-            <div class="score-label">Total Points</div>
-            <div class="score-number">
-              <span id="totalPoints">0</span><span class="star">★</span>
-            </div>
-          </div>
-        </section>
+    <main class="kiosk-main">
+      <ol class="kiosk-progress" aria-label="Recycling progress">
+        <li class="is-done"><span class="step-dot" aria-hidden="true">1</span>Prepare</li>
+        <li class="is-current"><span class="step-dot" aria-hidden="true">2</span>Insert</li>
+        <li><span class="step-dot" aria-hidden="true">3</span>Redeem</li>
+      </ol>
 
-        <section class="reward-card" aria-label="Reward requirement">
-          <img src="image 32.png" class="reward-icon" alt="Canned food" />
-          <div class="reward-copy">
-            <div class="reward-points">
-              <span class="points-need" id="rewardNeed">50</span> Points
-            </div>
-            <div class="reward-desc">= 1 Canned Food (Sardines or Tuna)</div>
-          </div>
-        </section>
-
-        <p class="notice">
-          You need <span id="pointsNeeded">50</span> more points to<br />redeem your food reward.
+      <div class="page-heading">
+        <h1 class="kiosk-title">Almost <em>There!</em></h1>
+        <p class="kiosk-sub">
+          Add <strong id="pointsNeeded">50</strong> more points to claim your food reward.
         </p>
-      </main>
+      </div>
 
-      <div class="actions">
-        <a href="insert.html" class="btn btn-green" role="button" aria-label="Continue Recycling">
-          <span class="icon-recycle">♻</span>
-          <span>Continue Recycling</span>
+      <div class="kiosk-ring score-ring" id="scoreRing" aria-label="Current total points">
+        <div class="kiosk-ring__orbit" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </div>
+        <div class="kiosk-ring__disc">
+          <span class="points-label">Total Points</span>
+          <span class="points-value">
+            <span id="totalPoints">0</span><span class="star" aria-hidden="true">&#9733;</span>
+          </span>
+        </div>
+      </div>
+
+      <div class="goal">
+        <div class="goal-track" role="img" aria-label="Progress toward your reward">
+          <div class="goal-fill" id="goalFill"></div>
+        </div>
+        <p class="goal-caption">
+          <img src="image 32.png" alt="" class="goal-icon" aria-hidden="true">
+          <span><strong id="rewardNeed">50</strong> points = 1 free canned meal</span>
+        </p>
+      </div>
+
+      <div class="low-actions">
+        <a href="insert.html" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" role="button">
+          <span aria-hidden="true">&#9851;</span> KEEP RECYCLING
         </a>
 
-        <button class="btn btn-outline" type="button" aria-label="Print QR Receipt"
-          onclick="window.location.href='printreceipt.html'">
-          <img src="image 33.png" alt="Print icon" class="print-icon" />
-          <span>Print&nbsp;&nbsp;QR Receipt</span>
-        </button>
+        <a href="printreceipt.html" class="kiosk-btn kiosk-btn--ghost" role="button">
+          <img src="image 33.png" alt="" class="print-icon" aria-hidden="true">
+          PRINT QR RECEIPT
+        </a>
       </div>
-    </div>
+    </main>
+  </div>
 
-    <script>
-      (function () {
-        var REWARD_POINTS = 50;
-        // read from sessionStorage (set by itemaccepted.html)
-        var total  = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
-        if (isNaN(total) || total < 0) total = 0;
-        var needed = Math.max(0, REWARD_POINTS - total);
+  <footer class="kiosk-info">
+    <span class="info-icon" aria-hidden="true">i</span>
+    <span>Print your QR receipt to save these points and finish on your next visit.</span>
+  </footer>
 
-        document.getElementById("totalPoints").textContent  = total;
-        document.getElementById("rewardNeed").textContent   = REWARD_POINTS;
-        document.getElementById("pointsNeeded").textContent = needed;
-        document.getElementById("scoreRing").setAttribute("aria-label", "Current total points " + total);
-      })();
-    </script>
-  </body>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    (function () {
+      var REWARD_POINTS = 50;
+      // read from sessionStorage (set by itemaccepted.html)
+      var total  = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+      if (isNaN(total) || total < 0) total = 0;
+      var needed = Math.max(0, REWARD_POINTS - total);
+
+      document.getElementById("totalPoints").textContent  = total;
+      document.getElementById("rewardNeed").textContent   = REWARD_POINTS;
+      document.getElementById("pointsNeeded").textContent = needed;
+      document.getElementById("scoreRing").setAttribute("aria-label", "Current total points " + total);
+
+      // fill the goal bar with how far along they are
+      var pct = Math.min(100, Math.round((total / REWARD_POINTS) * 100));
+      document.getElementById("goalFill").style.width = pct + "%";
+    })();
+  </script>
+</body>
 </html>
-
-

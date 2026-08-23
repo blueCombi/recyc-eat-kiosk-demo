@@ -1,48 +1,38 @@
-:root{
-  --teal-700:#167f77;
-  --teal-500:#1fa28f;
-  --green-600:#2fa04e;
-  --muted:#2b6f6d;
-  --btn-radius:12px;
-  --max-width:420px;
-}
-html,body{height:100%;}
-body{
-  margin:0; background:#fff; font-family: "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color:var(--muted);
-  display:flex; align-items:flex-start; justify-content:center; padding:40px 20px;
-}
-.card{
-  width:100%; max-width:var(--max-width); text-align:center;
-}
-/* logo area */
-.logo{display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:6px;}
-.logo img{height:96px; object-fit:contain;}
+/* Start Recycling — page specific only. Tokens and shared
+   components live in kiosk.css. */
 
-/* headline */
-.headline{
-  color:var(--teal-700); font-weight:700; font-size:36px; line-height:1.05; margin:18px 0 6px; letter-spacing:0.2px;
+.kiosk-shell { max-width: 640px; }
+
+/* the illustration is the only flexible block here, so let it give up
+   height first and keep the headline and buttons on screen */
+.hero-art {
+  display: block;
+  width: min(360px, 80%);
+  height: auto;
+  max-height: clamp(150px, 34vh, 300px);
+  object-fit: contain;
+  margin: 0 auto;
 }
 
-/* recycle image */
-.illustration{display:block; margin:6px auto 12px; width:78%; max-width:340px;}
-
-/* main CTA */
-.btn-primary{
-  display:inline-block; width:100%; text-decoration:none; text-align:center; background:var(--green-600); color:white;
-  padding:16px 18px; border-radius:14px; font-weight:800; font-size:20px; box-shadow:0 4px 0 rgba(0,0,0,0.06);
-  border:none; margin-top:12px; box-sizing:border-box;
+.start-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  width: min(420px, 100%);
 }
 
-/* secondary scan button */
-.btn-scan{
-  display:flex; align-items:center; justify-content:center; gap:14px; width:100%; padding:13px 18px; margin-top:14px;
-  border-radius:12px; border:3px solid var(--teal-700); background:transparent; color:var(--teal-700);
-  font-weight:700; font-size:18px; box-sizing:border-box;
-}
-.btn-scan img{height:28px; display:block}
+.start-actions .kiosk-btn { width: 100%; }
 
-/* small responsive tweaks */
-@media (max-width:420px){
-  .headline{font-size:30px}
-  .logo img{height:80px}
+.qr-icon {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 720px) {
+  .hero-art { width: min(300px, 78%); }
+}
+
+@media (max-height: 760px) {
+  .start-actions { gap: var(--sp-2); }
 }

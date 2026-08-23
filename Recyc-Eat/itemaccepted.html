@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Item Accepted</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="kiosk.css">
   <link rel="stylesheet" href="itemaccepted.css">
 </head>
 <body>
@@ -16,51 +17,61 @@
     <span class="leaf leaf-5"></span>
     <span class="leaf leaf-6"></span>
   </div>
-  <div class="page-backdrop" aria-hidden="true"></div>
+  <div class="kiosk-backdrop" aria-hidden="true"></div>
 
-  <div class="page">
-    <header class="brand">
-      <img src="logo.png" class="logo" alt="EcoNova">
+  <div class="kiosk-shell">
+    <header class="kiosk-header">
+      <img src="logo.png" class="kiosk-logo" alt="EcoNova">
     </header>
 
-    <main class="content">
-      <div class="status">
-        <div class="check-circle" aria-hidden="true">✓</div>
-        <h1 class="title">ITEM ACCEPTED!</h1>
-        <p class="gain">+<span id="gainValue">5</span> points!</p>
+    <main class="kiosk-main">
+      <ol class="kiosk-progress" aria-label="Recycling progress">
+        <li class="is-done"><span class="step-dot" aria-hidden="true">1</span>Prepare</li>
+        <li class="is-current"><span class="step-dot" aria-hidden="true">2</span>Insert</li>
+        <li><span class="step-dot" aria-hidden="true">3</span>Redeem</li>
+      </ol>
+
+      <!-- starts idle: the wording only claims an item was taken once one was -->
+      <div class="accept-status is-idle" id="acceptStatus" role="status" aria-live="polite">
+        <span class="accept-check" aria-hidden="true">&check;</span>
+        <h1 class="kiosk-title accept-title" id="acceptTitle">Ready for your item</h1>
+        <p class="accept-gain">+<span id="gainValue">5</span> points!</p>
       </div>
 
-      <button type="button" class="points-ring" id="pointsRing" aria-label="Add points">
-        <div class="dot-orbit" aria-hidden="true">
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-          <span class="dot"></span><span class="dot"></span><span class="dot"></span>
-        </div>
-        <div class="points-center">
-          <div class="points-label">Total Points</div>
-          <div class="points-value">
-            <span id="totalPoints">0</span><span class="star">★</span>
-          </div>
-        </div>
+      <button type="button" class="kiosk-ring points-ring" id="pointsRing" aria-label="Add points for this item">
+        <span class="kiosk-ring__orbit" aria-hidden="true">
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+          <span></span><span></span><span></span><span></span>
+        </span>
+        <span class="kiosk-ring__disc">
+          <span class="points-label">Total Points</span>
+          <span class="points-value">
+            <span id="totalPoints">0</span><span class="star" aria-hidden="true">&#9733;</span>
+          </span>
+        </span>
       </button>
 
-      <button type="button" class="item-row" id="itemToggle" aria-label="Change accepted item, double tap to reject item">
-        <span class="item-box">
-          <img src="bottle.png" alt="Plastic bottle" class="item-icon" id="itemIcon">
+      <button type="button" class="item-toggle" id="itemToggle"
+        aria-label="Change accepted item, double tap to reject the item">
+        <span class="item-toggle__art">
+          <img src="bottle.png" alt="Small plastic bottle" id="itemIcon">
         </span>
-        <span class="item-badge" id="itemBadge">Small Plastic Bottle</span>
+        <span class="item-toggle__label" id="itemBadge">Small Plastic Bottle</span>
+      </button>
+
+      <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
+        FINISH <span aria-hidden="true">&check;</span>
       </button>
     </main>
   </div>
 
-  <a href="#" class="btn-finish" id="btnFinish" role="button">Finish <span class="check">✓</span></a>
-
-  <footer class="info-bar">
+  <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span>Insert a plastic bottle or aluminum can to begin.</span>
+    <span>Tap the ring for each item you insert. Reach 50 points for a free meal.</span>
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
     import { POINTS, createVoucher, addPoints, scanVoucher } from './firebase-config.js';
 
@@ -79,6 +90,8 @@
 
     const totalEl   = document.getElementById("totalPoints");
     const gainEl    = document.getElementById("gainValue");
+    const status    = document.getElementById("acceptStatus");
+    const statusTitle = document.getElementById("acceptTitle");
     const ring      = document.getElementById("pointsRing");
     const finishBtn = document.getElementById("btnFinish");
     const itemToggle= document.getElementById("itemToggle");
@@ -92,6 +105,11 @@
       totalEl.parentElement.classList.remove("pop");
       void totalEl.parentElement.offsetWidth;
       totalEl.parentElement.classList.add("pop");
+    }
+
+    function announceAccepted() {
+      status.classList.remove("is-idle");
+      statusTitle.textContent = "Item Accepted!";
     }
 
     function updateItemUI() {
@@ -128,32 +146,56 @@
       }
 
       render(totalPoints, ITEM_TYPES[0].pts);
+
+      // insert.html sends ?award=1 to mean "an item just went in". Drop the
+      // parameter first so a page refresh cannot award it twice.
+      if (new URLSearchParams(location.search).has("award")) {
+        history.replaceState(null, "", location.pathname);
+        handleAddPoints();
+      }
+
       checkRedeem(totalPoints);
     }
 
+    // Firestore writes run one at a time. Tapping faster than the network
+    // used to start several createVoucher calls at once, each minting its
+    // own receipt ID and splitting the points across vouchers.
+    let writeQueue = Promise.resolve();
+
+    function queueWrite(task) {
+      writeQueue = writeQueue.then(task).catch(err => console.error("Sync failed:", err));
+    }
+
     // ── add points + save to Firebase ────────────────────────────
-    async function handleAddPoints() {
+    function handleAddPoints() {
       if (redirecting) return;
       const item = ITEM_TYPES[itemIndex];
       totalPoints += item.pts;
 
-      // track item in session list
+      // what this one insert added, for the Firebase session log
+      const inserted = { type: item.key, label: item.label, quantity: 1, points: item.pts };
+
+      // running tally for the receipt screen
       const existing = sessionItems.find(i => i.type === item.key);
       if (existing) { existing.quantity++; existing.points += item.pts; }
-      else          { sessionItems.push({ type: item.key, label: item.label, quantity: 1, points: item.pts }); }
+      else          { sessionItems.push({ ...inserted }); }
 
       render(totalPoints, item.pts);
+      announceAccepted();
       sessionStorage.setItem("totalPoints", totalPoints);
+      // the receipt screen reads this back to list what was inserted
+      sessionStorage.setItem("sessionItems", JSON.stringify(sessionItems));
 
-      // save to Firebase
-      if (!voucherID) {
-        // first item ever — create new voucher
-        voucherID = await createVoucher(sessionItems, totalPoints);
-        sessionStorage.setItem("voucherID", voucherID);
-      } else {
-        // update existing voucher
-        await addPoints(voucherID, sessionItems, item.pts);
-      }
+      const runningTotal = totalPoints;
+
+      queueWrite(async () => {
+        if (!voucherID) {
+          voucherID = await createVoucher([inserted], runningTotal, item.pts);
+          sessionStorage.setItem("voucherID", voucherID);
+        } else {
+          await addPoints(voucherID, [inserted], item.pts);
+        }
+      });
 
       checkRedeem(totalPoints);
     }
@@ -201,5 +243,3 @@
   </script>
 </body>
 </html>
-
-

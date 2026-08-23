@@ -1,6 +1,6 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAQZstw1qOUltsN_HKPZE7qNI2uRRWpwU",
@@ -38,21 +38,27 @@ export function generateReceiptID() {
   return `EM-${date}-${time}-${counter}`;
 }
 
+// Prevent mutation of items array before Firestore serialises it
+function freeze(items) {
+  return JSON.parse(JSON.stringify(items || []));
+}
+
 // ─── Create a new voucher (first visit) ─────────────────────────
-export async function createVoucher(items, pointsEarned) {
+export async function createVoucher(items, totalPoints, pointsEarned = totalPoints) {
   const voucherID = generateReceiptID();
   const now       = new Date();
+  const logged    = freeze(items);
 
   await setDoc(doc(db, "vouchers", voucherID), {
     voucher_id:   voucherID,
-    total_points: pointsEarned,
+    total_points: totalPoints,
     status:       "active",
     created_at:   now.toISOString(),
   });
 
-  await addDoc(collection(db, "sessions"), {
+  await setDoc(doc(db, "sessions", `${voucherID}_${now.getTime()}`), {
     voucher_id:    voucherID,
-    items:         items,
+    items:         logged,
     points_earned: pointsEarned,
     session_date:  now.toISOString(),
     action:        "created",
@@ -64,21 +70,22 @@ export async function createVoucher(items, pointsEarned) {
 // ─── Load existing voucher by scanning QR ───────────────────────
 export async function scanVoucher(voucherID) {
   const snap = await getDoc(doc(db, "vouchers", voucherID));
-  if (!snap.exists())                        return { success: false, message: "QR not found." };
-  if (snap.data().status === "redeemed")     return { success: false, message: "QR already redeemed." };
+  if (!snap.exists())                    return { success: false, message: "QR not found." };
+  if (snap.data().status === "redeemed") return { success: false, message: "QR already redeemed." };
   return { success: true, ...snap.data() };
 }
 
 // ─── Add more points to existing voucher (return visit) ─────────
 export async function addPoints(voucherID, newItems, pointsToAdd) {
-  const ref  = doc(db, "vouchers", voucherID);
-  const snap = await getDoc(ref);
+  const ref    = doc(db, "vouchers", voucherID);
+  const logged = freeze(newItems);
+  const snap   = await getDoc(ref);
   const newTotal = snap.data().total_points + pointsToAdd;
 
   await updateDoc(ref, { total_points: newTotal });
-  await addDoc(collection(db, "sessions"), {
+  await setDoc(doc(db, "sessions", `${voucherID}_${Date.now()}`), {
     voucher_id:    voucherID,
-    items:         newItems,
+    items:         logged,
     points_earned: pointsToAdd,
     session_date:  new Date().toISOString(),
     action:        "continued",
@@ -97,11 +104,11 @@ export async function redeemReward(voucherID, rewardType) {
     return { success: false, message: "Not enough points." };
 
   await updateDoc(ref, { status: "redeemed" });
-  await addDoc(collection(db, "redemptions"), {
-    voucher_id:   voucherID,
-    points_used:  data.total_points,
-    reward_type:  rewardType,
-    redeemed_at:  new Date().toISOString(),
+  await setDoc(doc(db, "redemptions", voucherID), {
+    voucher_id:  voucherID,
+    points_used: data.total_points,
+    reward_type: rewardType,
+    redeemed_at: new Date().toISOString(),
   });
 
   return { success: true };

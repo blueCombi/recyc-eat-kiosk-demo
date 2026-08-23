@@ -5,65 +5,75 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Dispensing Food Reward</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="kiosk.css">
   <link rel="stylesheet" href="dispensingfood.css" />
 </head>
 <body>
-  <div class="page-container">
-    <header class="brand-header">
-      <img src="logo.png" class="brand-logo" alt="EcoNova Logo">
+  <div class="leaf-layer" aria-hidden="true">
+    <span class="leaf leaf-1"></span>
+    <span class="leaf leaf-2"></span>
+    <span class="leaf leaf-3"></span>
+    <span class="leaf leaf-4"></span>
+    <span class="leaf leaf-5"></span>
+    <span class="leaf leaf-6"></span>
+  </div>
+  <div class="kiosk-backdrop" aria-hidden="true"></div>
+
+  <div class="kiosk-shell">
+    <header class="kiosk-header">
+      <img src="logo.png" class="kiosk-logo" alt="EcoNova">
     </header>
 
-    <main class="content-area">
-      <!-- VENDING MACHINE ILLUSTRATION -->
-      <div class="vending-machine">
-        <div class="machine-body">
-          <div class="machine-top">
-            <div class="machine-brand">EcoNova</div>
-          </div>
-          
-          <div class="machine-window">
-            <div class="machine-interior">
-              <div class="food-item">
-                <div class="can">
-                  <div class="can-label">
-                    <div class="label-text">CANNED</div>
-                    <div class="label-text">FOOD</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="machine-light" id="machineLight"></div>
-          </div>
+    <main class="kiosk-main">
+      <ol class="kiosk-progress" aria-label="Recycling progress">
+        <li class="is-done"><span class="step-dot" aria-hidden="true">1</span>Prepare</li>
+        <li class="is-done"><span class="step-dot" aria-hidden="true">2</span>Insert</li>
+        <li class="is-current"><span class="step-dot" aria-hidden="true">3</span>Redeem</li>
+      </ol>
 
-          <div class="machine-bottom">
-            <div class="dispense-slot"></div>
-          </div>
+      <div class="page-heading">
+        <h1 class="kiosk-title">Dispensing your <em>reward</em></h1>
+        <p class="kiosk-sub">Your canned meal is on its way.</p>
+      </div>
+
+      <div class="dispenser" aria-hidden="true">
+        <div class="dispenser__head">
+          <span class="dispenser__brand">EcoNova</span>
+          <span class="dispenser__light"></span>
+        </div>
+
+        <div class="dispenser__window">
+          <span class="dispenser__can">
+            <span class="dispenser__can-lid"></span>
+            <span class="dispenser__can-label">CANNED<br>FOOD</span>
+          </span>
+        </div>
+
+        <div class="dispenser__tray">
+          <span class="dispenser__slot"></span>
         </div>
       </div>
 
-      <!-- STATUS TEXT -->
-      <h1 class="status-title">Dispensing Food Reward...</h1>
-      <p class="status-message">Please wait...</p>
-
-      <!-- LOADING DOTS -->
-      <div class="loading-dots">
-        <span class="dot dot-1"></span>
-        <span class="dot dot-2"></span>
-        <span class="dot dot-3"></span>
-        <span class="dot dot-4"></span>
+      <div class="dispense-status">
+        <p class="dispense-status__text" role="status" aria-live="polite">Releasing your can...</p>
+        <div class="dispense-progress" aria-hidden="true">
+          <div class="dispense-progress__fill"></div>
+        </div>
       </div>
     </main>
-
-    <div class="wave-background" aria-hidden="true"></div>
   </div>
 
+  <footer class="kiosk-info">
+    <span class="info-icon" aria-hidden="true">i</span>
+    <span>Collect your can from the tray below the screen.</span>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script>
-    // Redirect to food reward ready page after 4 seconds (dispensing time)
-    setTimeout(function() {
-      window.location.href = 'foodrewardready.html';
+    // keep in step with the --dispense-ms duration in dispensingfood.css
+    setTimeout(function () {
+      window.location.href = "foodrewardready.html";
     }, 4000);
   </script>
 </body>
 </html>
-
-
