@@ -114,4 +114,4 @@ export async function redeemReward(voucherID, rewardType) {
   return { success: true };
 }
 
-export { db };
+export { db };  
