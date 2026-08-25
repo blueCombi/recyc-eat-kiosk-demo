@@ -44,7 +44,8 @@
         </div>
 
         <div class="kiosk-ring__disc">
-          <a href="itemaccepted.html?award=1" class="kiosk-ring__art" aria-label="Simulate inserting an item">
+          <a href="itemaccepted.html?award=1" class="kiosk-ring__art" id="insertArt"
+             aria-label="Simulate inserting an item, double tap to simulate a rejected item">
             <img src="bottlesncan.png" alt="A plastic bottle and an aluminum can">
           </a>
         </div>
@@ -107,6 +108,36 @@
     }
 
     resumeSession();
+
+    // Same convention as itemaccepted.html: one tap means the bin took the
+    // item, two taps mean it spat it back out. The timer is what tells them
+    // apart, since a double tap also fires a first click.
+    const insertArt = document.getElementById("insertArt");
+    let tapTimer = null;
+    let leaving  = false;
+
+    insertArt.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (leaving || tapTimer) return;
+
+      tapTimer = setTimeout(() => {
+        tapTimer = null;
+        leaving  = true;
+        window.location.href = insertArt.getAttribute("href");
+      }, 260);
+    });
+
+    insertArt.addEventListener("dblclick", (event) => {
+      event.preventDefault();
+      if (leaving) return;
+
+      clearTimeout(tapTimer);
+      tapTimer = null;
+      leaving  = true;
+
+      setStatus("Item not recognised — returning it.", true);
+      setTimeout(() => { window.location.href = "itemrejected.html"; }, 600);
+    });
   </script>
 </body>
 </html>
