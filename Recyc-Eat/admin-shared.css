@@ -294,6 +294,87 @@ img { max-width: 100%; }
   padding: 24px;
 }
 
+/* ===== LOW STOCK ALERT ===================================== */
+.stock-alert {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  background: var(--amber-100);
+  border: 1.5px solid rgba(217, 119, 6, 0.35);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+
+.stock-alert[hidden] {
+  display: none !important;
+}
+
+.stock-alert.is-critical {
+  background: var(--red-100);
+  border-color: rgba(207, 70, 64, 0.35);
+}
+
+.stock-alert__icon {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.7);
+  color: var(--amber-600);
+}
+
+.stock-alert.is-critical .stock-alert__icon {
+  color: var(--red-600);
+}
+
+.stock-alert__icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.stock-alert__body {
+  flex: 1;
+  min-width: 200px;
+}
+
+.stock-alert__title {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.stock-alert__text {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.stock-alert__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: auto;
+}
+
+@media (max-width: 560px) {
+  .stock-alert__actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .stock-alert__actions .btn {
+    flex: 1;
+  }
+}
+
 .breadcrumbs {
   display: flex;
   flex-wrap: wrap;

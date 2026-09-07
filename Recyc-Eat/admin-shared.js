@@ -1,28 +1,6 @@
 /* EcoNova Admin — shared shell helpers + demo data */
 
 const AdminUI = (() => {
-  function initShell() {
-    const sidebar = document.getElementById("adminSidebar");
-    const overlay = document.getElementById("sidebarOverlay");
-    const toggle = document.getElementById("menuToggle");
-    const close = () => {
-      sidebar?.classList.remove("is-open");
-      overlay?.classList.remove("is-open");
-    };
-
-    toggle?.addEventListener("click", () => {
-      sidebar?.classList.toggle("is-open");
-      overlay?.classList.toggle("is-open");
-    });
-    overlay?.addEventListener("click", close);
-
-    document.querySelectorAll(".nav-link").forEach((link) => {
-      if (link.getAttribute("href") === location.pathname.split("/").pop()) {
-        link.classList.add("is-active");
-      }
-    });
-  }
-
   function toast(title, message = "", type = "success") {
     let stack = document.querySelector(".toast-stack");
     if (!stack) {
@@ -80,7 +58,140 @@ const AdminUI = (() => {
     return Number(n).toLocaleString("en-PH");
   }
 
-  return { initShell, toast, openModal, closeModal, escapeHtml, formatDate, formatDateTime, formatNumber };
+  function playStockAlertSound() {
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+
+      const run = () => {
+        const now = ctx.currentTime;
+        const tone = (freq, start, duration) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = "sine";
+          osc.frequency.value = freq;
+          gain.gain.setValueAtTime(0.0001, start);
+          gain.gain.exponentialRampToValueAtTime(0.14, start + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, start + duration);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(start);
+          osc.stop(start + duration + 0.05);
+        };
+
+        // Soft two-note chime
+        tone(880, now, 0.16);
+        tone(1175, now + 0.18, 0.22);
+        setTimeout(() => ctx.close().catch(() => {}), 800);
+      };
+
+      if (ctx.state === "suspended") {
+        ctx.resume().then(run).catch(() => {});
+      } else {
+        run();
+      }
+    } catch (_) {
+      /* ignore audio errors (autoplay policy, etc.) */
+    }
+  }
+
+  function initStockAlert() {
+    const content = document.querySelector(".admin-content");
+    if (!content || typeof AdminData === "undefined") return;
+
+    let alertEl = document.getElementById("stockAlert");
+    if (!alertEl) {
+      alertEl = document.createElement("div");
+      alertEl.className = "stock-alert";
+      alertEl.id = "stockAlert";
+      alertEl.hidden = true;
+      alertEl.setAttribute("role", "alert");
+      alertEl.innerHTML = `
+        <div class="stock-alert__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+            <path d="M12 9v4M12 17h.01"/>
+          </svg>
+        </div>
+        <div class="stock-alert__body">
+          <strong class="stock-alert__title">Low stock reminder</strong>
+          <p class="stock-alert__text" id="stockAlertText"></p>
+        </div>
+        <div class="stock-alert__actions">
+          <button class="btn btn-ghost btn-sm" type="button" id="ignoreStockBtn">Ignore</button>
+          <a class="btn btn-primary btn-sm" href="food-inventory.html" id="addStockBtn">Add stock</a>
+        </div>`;
+
+      const header = content.querySelector(".page-header");
+      const crumbs = content.querySelector(".breadcrumbs");
+      if (header) header.after(alertEl);
+      else if (crumbs) crumbs.after(alertEl);
+      else content.prepend(alertEl);
+    }
+
+    const activeAlerts = AdminData.getActiveStockAlerts();
+    const textEl = document.getElementById("stockAlertText");
+    const ignoreBtn = document.getElementById("ignoreStockBtn");
+
+    if (!activeAlerts.length) {
+      alertEl.hidden = true;
+      return;
+    }
+
+    const names = activeAlerts.map((i) => i.name).join(", ");
+    const hasOut = activeAlerts.some((i) => i.status === "out");
+    alertEl.hidden = false;
+    alertEl.classList.toggle("is-critical", hasOut);
+    if (textEl) {
+      textEl.textContent = hasOut
+        ? `${names} ${activeAlerts.length === 1 ? "is" : "are"} running low or out of stock. Restock soon so rewards stay available.`
+        : `${names} ${activeAlerts.length === 1 ? "is" : "are"} running low. Add stock soon so rewards stay available.`;
+    }
+
+    // Play once per alert set this session (not on every page switch)
+    const soundKey = "econova_stock_sound_" + activeAlerts.map((i) => `${i.id}:${i.qty}`).join("|");
+    if (sessionStorage.getItem(soundKey) !== "1") {
+      sessionStorage.setItem(soundKey, "1");
+      playStockAlertSound();
+    }
+
+    if (ignoreBtn && !ignoreBtn.dataset.bound) {
+      ignoreBtn.dataset.bound = "1";
+      ignoreBtn.addEventListener("click", () => {
+        const current = AdminData.getActiveStockAlerts();
+        AdminData.ignoreStockAlerts(current);
+        alertEl.hidden = true;
+        toast("Reminder dismissed", "You can restock anytime from Food Inventory.");
+      });
+    }
+  }
+
+  function initShell() {
+    const sidebar = document.getElementById("adminSidebar");
+    const overlay = document.getElementById("sidebarOverlay");
+    const toggle = document.getElementById("menuToggle");
+    const close = () => {
+      sidebar?.classList.remove("is-open");
+      overlay?.classList.remove("is-open");
+    };
+
+    toggle?.addEventListener("click", () => {
+      sidebar?.classList.toggle("is-open");
+      overlay?.classList.toggle("is-open");
+    });
+    overlay?.addEventListener("click", close);
+
+    document.querySelectorAll(".nav-link").forEach((link) => {
+      if (link.getAttribute("href") === location.pathname.split("/").pop()) {
+        link.classList.add("is-active");
+      }
+    });
+
+    initStockAlert();
+  }
+
+  return { initShell, initStockAlert, toast, openModal, closeModal, escapeHtml, formatDate, formatDateTime, formatNumber };
 })();
 
 /* Demo datasets used across admin pages */
@@ -192,6 +303,32 @@ const AdminData = (() => {
     localStorage.setItem("econova_admin_settings", JSON.stringify(data));
   }
 
+  /* Ignore map: { itemId: qtyWhenIgnored }. Alert returns if qty changes. */
+  function getIgnoredStock() {
+    try {
+      return JSON.parse(localStorage.getItem("econova_ignored_stock") || "{}");
+    } catch {
+      return {};
+    }
+  }
+
+  function ignoreStockAlerts(items) {
+    const map = getIgnoredStock();
+    items.forEach((item) => {
+      map[item.id] = item.qty;
+    });
+    localStorage.setItem("econova_ignored_stock", JSON.stringify(map));
+  }
+
+  function getActiveStockAlerts() {
+    const ignored = getIgnoredStock();
+    return getInventory().filter((item) => {
+      if (item.status !== "low" && item.status !== "out") return false;
+      if (!(item.id in ignored)) return true;
+      return Number(ignored[item.id]) !== Number(item.qty);
+    });
+  }
+
   return {
     participants,
     collections,
@@ -203,6 +340,9 @@ const AdminData = (() => {
     stockStatus,
     getSettings,
     saveSettings,
+    getIgnoredStock,
+    ignoreStockAlerts,
+    getActiveStockAlerts,
   };
 })();
 
