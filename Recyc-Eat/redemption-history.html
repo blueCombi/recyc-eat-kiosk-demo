@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Redemption History — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="redemption-history.css" />
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text"><strong>EcoNova</strong></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>Dashboard</a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link" href="items-collected.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Items Collected</a>
+        <a class="nav-link is-active" href="redemption-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>Redemptions</a>
+        <a class="nav-link" href="food-inventory.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Food Inventory</a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
+        <a class="nav-link" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
+      </nav>
+      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Redemption History</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Redemptions</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Redemption History</h1>
+            <p>Search and filter reward redemptions by receipt ID, date, and status.</p>
+          </div>
+        </div>
+
+        <div class="toolbar redemptions-toolbar">
+          <div class="field field--grow">
+            <label for="search">Search</label>
+            <input class="input" type="search" id="search" placeholder="Receipt ID, item, or redemption ID" />
+          </div>
+          <div class="field">
+            <label for="fromDate">From</label>
+            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+          </div>
+          <div class="field">
+            <label for="toDate">To</label>
+            <input class="input" type="date" id="toDate" value="2026-09-07" />
+          </div>
+          <div class="field">
+            <label for="statusFilter">Status</label>
+            <select class="select" id="statusFilter">
+              <option value="all">All statuses</option>
+              <option value="completed">Completed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="button" id="applyFilters">Apply</button>
+        </div>
+
+        <section class="card">
+          <div class="card-header">
+            <h2>Redemptions</h2>
+            <span class="badge badge-neutral" id="resultCount">0 results</span>
+          </div>
+          <div id="loadingState" class="state-box" hidden>
+            <div class="spinner" aria-hidden="true"></div>
+            <strong>Loading redemptions…</strong>
+          </div>
+          <div id="emptyState" class="state-box" hidden>
+            <strong>No redemptions found</strong>
+            <p>Adjust search or filters and try again.</p>
+          </div>
+          <div id="errorState" class="state-box" hidden>
+            <strong>Couldn’t load data</strong>
+            <p>Something went wrong. Please refresh the page.</p>
+            <button class="btn btn-secondary btn-sm" type="button" id="retryBtn">Retry</button>
+          </div>
+          <div class="table-wrap redemptions-wrap" id="tableWrap">
+            <table class="table redemptions-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Receipt ID</th>
+                  <th>Item redeemed</th>
+                  <th>Points used</th>
+                  <th>Date &amp; time</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody"></tbody>
+            </table>
+          </div>
+          <div class="table-foot redemptions-foot">
+            <span id="pageInfo">Showing 0–0 of 0</span>
+            <div class="pagination" id="pagination"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const PAGE_SIZE = 5;
+    let page = 1;
+    let filtered = [];
+
+    const badgeMap = {
+      completed: "badge-success",
+      pending: "badge-warning",
+    };
+
+    function getFiltered() {
+      const q = document.getElementById("search").value.trim().toLowerCase();
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const status = document.getElementById("statusFilter").value;
+
+      return AdminData.redemptions
+        .filter((r) => {
+          const day = r.date.slice(0, 10);
+          if (day < from || day > to) return false;
+          if (status !== "all" && r.status !== status) return false;
+          if (!q) return true;
+          return [r.id, r.receiptId, r.item, r.status].join(" ").toLowerCase().includes(q);
+        })
+        .slice()
+        .sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
+
+    function renderPage() {
+      const loading = document.getElementById("loadingState");
+      const empty = document.getElementById("emptyState");
+      const error = document.getElementById("errorState");
+      const tableWrap = document.getElementById("tableWrap");
+      const foot = document.querySelector(".table-foot");
+
+      loading.hidden = true;
+      error.hidden = true;
+      empty.hidden = filtered.length > 0;
+      tableWrap.hidden = filtered.length === 0;
+      foot.hidden = filtered.length === 0;
+
+      document.getElementById("resultCount").textContent = `${filtered.length} results`;
+
+      const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+      if (page > pages) page = pages;
+      const start = (page - 1) * PAGE_SIZE;
+      const slice = filtered.slice(start, start + PAGE_SIZE);
+
+      document.getElementById("tableBody").innerHTML = slice.map((r) => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${AdminUI.escapeHtml(r.receiptId)}</td>
+          <td>${AdminUI.escapeHtml(r.item)}</td>
+          <td class="num">${r.points}</td>
+          <td>${AdminUI.formatDateTime(r.date)}</td>
+          <td><span class="badge ${badgeMap[r.status] || "badge-neutral"}">${r.status}</span></td>
+        </tr>`).join("");
+
+      const end = Math.min(start + PAGE_SIZE, filtered.length);
+      document.getElementById("pageInfo").textContent =
+        filtered.length ? `Showing ${start + 1}–${end} of ${filtered.length}` : "Showing 0–0 of 0";
+
+      const pager = document.getElementById("pagination");
+      pager.innerHTML = "";
+      const prev = document.createElement("button");
+      prev.className = "page-btn";
+      prev.textContent = "‹";
+      prev.disabled = page <= 1;
+      prev.onclick = () => { page -= 1; renderPage(); };
+      pager.appendChild(prev);
+
+      for (let i = 1; i <= pages; i++) {
+        const btn = document.createElement("button");
+        btn.className = "page-btn" + (i === page ? " is-active" : "");
+        btn.textContent = String(i);
+        btn.onclick = () => { page = i; renderPage(); };
+        pager.appendChild(btn);
+      }
+
+      const next = document.createElement("button");
+      next.className = "page-btn";
+      next.textContent = "›";
+      next.disabled = page >= pages;
+      next.onclick = () => { page += 1; renderPage(); };
+      pager.appendChild(next);
+    }
+
+    function apply() {
+      page = 1;
+      filtered = getFiltered();
+      renderPage();
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("applyFilters").addEventListener("click", apply);
+      document.getElementById("search").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") apply();
+      });
+      document.getElementById("retryBtn").addEventListener("click", apply);
+      apply();
+    });
+  </script>
+</body>
+</html>

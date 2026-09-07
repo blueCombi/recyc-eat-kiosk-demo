@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Items Collected — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="items-collected.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text"><strong>EcoNova</strong></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>Dashboard</a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link is-active" href="items-collected.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Items Collected</a>
+        <a class="nav-link" href="redemption-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>Redemptions</a>
+        <a class="nav-link" href="food-inventory.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Food Inventory</a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
+        <a class="nav-link" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
+      </nav>
+      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Items Collected</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Items Collected</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Items Collected</h1>
+            <p>Collection totals, history, and trends by date range.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="field">
+            <label for="fromDate">From</label>
+            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+          </div>
+          <div class="field">
+            <label for="toDate">To</label>
+            <input class="input" type="date" id="toDate" value="2026-09-07" />
+          </div>
+          <div class="field">
+            <label for="period">Totals view</label>
+            <select class="select" id="period">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <div class="field">
+            <label for="typeFilter">Item type</label>
+            <select class="select" id="typeFilter">
+              <option value="all">All types</option>
+              <option value="Plastic bottle">Plastic bottle</option>
+              <option value="Big bottle">Big bottle</option>
+              <option value="Aluminum can">Aluminum can</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="button" id="applyFilters">Apply filters</button>
+        </div>
+
+        <section class="stat-grid items-summary">
+          <article class="card stat-card">
+            <div class="stat-card__label">Items in range</div>
+            <div class="stat-card__value" id="rangeTotal">0</div>
+            <span class="stat-card__trend trend-up" id="rangeSessions">0 sessions</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Points earned</div>
+            <div class="stat-card__value" id="rangePoints">0</div>
+            <span class="stat-card__trend trend-flat">From collections</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Daily average</div>
+            <div class="stat-card__value" id="rangeAvg">0</div>
+            <span class="stat-card__trend trend-flat">Items / day</span>
+          </article>
+        </section>
+
+        <section class="grid-2 items-charts">
+          <article class="card">
+            <div class="card-header"><h2 id="chartTitle">Daily collection totals</h2></div>
+            <div class="card-body">
+              <div class="chart-wrap"><canvas id="collectionChart"></canvas></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-header"><h2>By item type</h2></div>
+            <div class="card-body">
+              <div class="chart-wrap chart-wrap--sm"><canvas id="typeChart"></canvas></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="card items-history">
+          <div class="card-header"><h2>Collection history</h2></div>
+          <div id="tableState"></div>
+          <div class="table-wrap">
+            <table class="table" id="historyTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Date &amp; time</th>
+                  <th>Item type</th>
+                  <th>Qty</th>
+                  <th>Points</th>
+                  <th>Receipt ID</th>
+                </tr>
+              </thead>
+              <tbody id="historyBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    let collectionChart, typeChart;
+
+    function inRange(iso, from, to) {
+      const d = iso.slice(0, 10);
+      return d >= from && d <= to;
+    }
+
+    function groupTotals(rows, period) {
+      const map = new Map();
+      rows.forEach((row) => {
+        const d = new Date(row.date);
+        let key;
+        if (period === "monthly") {
+          key = d.toLocaleString("en-PH", { month: "short", year: "numeric" });
+        } else if (period === "weekly") {
+          const start = new Date(d);
+          start.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+          key = "Week of " + start.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+        } else {
+          key = d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+        }
+        map.set(key, (map.get(key) || 0) + row.qty);
+      });
+      return { labels: [...map.keys()], values: [...map.values()] };
+    }
+
+    function render() {
+      const from = document.getElementById("fromDate").value;
+      const to = document.getElementById("toDate").value;
+      const period = document.getElementById("period").value;
+      const type = document.getElementById("typeFilter").value;
+
+      let rows = AdminData.collections.filter((c) => inRange(c.date, from, to));
+      if (type !== "all") rows = rows.filter((c) => c.type === type);
+
+      const totalQty = rows.reduce((s, r) => s + r.qty, 0);
+      const totalPts = rows.reduce((s, r) => s + r.points, 0);
+      const days = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);
+
+      document.getElementById("rangeTotal").textContent = AdminUI.formatNumber(totalQty);
+      document.getElementById("rangeSessions").textContent = `${rows.length} sessions`;
+      document.getElementById("rangePoints").textContent = AdminUI.formatNumber(totalPts);
+      document.getElementById("rangeAvg").textContent = AdminUI.formatNumber(Math.round(totalQty / days));
+
+      const titles = { daily: "Daily collection totals", weekly: "Weekly collection totals", monthly: "Monthly collection totals" };
+      document.getElementById("chartTitle").textContent = titles[period];
+
+      const grouped = groupTotals(rows, period);
+      const typeMap = {};
+      rows.forEach((r) => { typeMap[r.type] = (typeMap[r.type] || 0) + r.qty; });
+
+      const body = document.getElementById("historyBody");
+      const state = document.getElementById("tableState");
+      if (!rows.length) {
+        body.innerHTML = "";
+        state.innerHTML = `<div class="state-box"><strong>No collections found</strong><p>Try widening the date range or clearing the type filter.</p></div>`;
+        document.getElementById("historyTable").style.display = "none";
+      } else {
+        state.innerHTML = "";
+        document.getElementById("historyTable").style.display = "";
+        body.innerHTML = rows.slice().reverse().map((r) => `
+          <tr>
+            <td>${r.id}</td>
+            <td>${AdminUI.formatDateTime(r.date)}</td>
+            <td>${AdminUI.escapeHtml(r.type)}</td>
+            <td class="num">${r.qty}</td>
+            <td class="num">${r.points}</td>
+            <td>${AdminUI.escapeHtml(r.receiptId)}</td>
+          </tr>`).join("");
+      }
+
+      if (collectionChart) collectionChart.destroy();
+      collectionChart = new Chart(document.getElementById("collectionChart"), {
+        type: "line",
+        data: {
+          labels: grouped.labels,
+          datasets: [{
+            label: "Items",
+            data: grouped.values,
+            borderColor: "#1fa28f",
+            backgroundColor: "rgba(31,162,143,0.15)",
+            fill: true,
+            tension: 0.35,
+            pointRadius: 4,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+      });
+
+      if (typeChart) typeChart.destroy();
+      typeChart = new Chart(document.getElementById("typeChart"), {
+        type: "doughnut",
+        data: {
+          labels: Object.keys(typeMap),
+          datasets: [{
+            data: Object.values(typeMap),
+            backgroundColor: ["#1fa28f", "#2fa04e", "#167f77"],
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+        },
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("applyFilters").addEventListener("click", render);
+      render();
+    });
+  </script>
+</body>
+</html>

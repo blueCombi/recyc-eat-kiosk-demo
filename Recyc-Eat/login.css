@@ -1,0 +1,166 @@
+/* Log In — page specific only. Tokens and shared
+   components live in kiosk.css. */
+
+/* Shared kiosk logo is 72px (tablet header size). On this
+   portal page it needs to read as a stronger brand mark. */
+.kiosk-header .kiosk-logo {
+  height: clamp(110px, 16vh, 148px);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(var(--sp-3), 2vh, var(--sp-5));
+  padding: clamp(var(--sp-4), 3vh, var(--sp-6));
+  text-align: left;
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.login-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.login-label {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.login-forgot {
+  font-size: var(--text-xs);
+  font-weight: 700;
+  color: var(--teal-600);
+  text-decoration: none;
+}
+
+.login-forgot:hover,
+.login-forgot:focus-visible {
+  color: var(--teal-900);
+  text-decoration: underline;
+}
+
+.login-input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 var(--sp-4);
+  font-family: inherit;
+  font-size: var(--text-base);
+  color: var(--ink);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: var(--r-sm);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-input::placeholder {
+  color: #8aa39a;
+}
+
+.login-input:focus {
+  outline: none;
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 4px var(--teal-050);
+}
+
+.login-password-wrap {
+  position: relative;
+}
+
+.login-password-wrap .login-input {
+  padding-right: calc(var(--tap) + var(--sp-2));
+}
+
+.login-toggle {
+  position: absolute;
+  top: 50%;
+  right: var(--sp-2);
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: none;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.login-toggle:hover,
+.login-toggle:focus-visible {
+  color: var(--teal-700);
+  background: var(--teal-050);
+}
+
+.login-toggle:focus-visible {
+  outline: 2px solid var(--teal-500);
+  outline-offset: 2px;
+}
+
+.login-toggle__icon {
+  width: 22px;
+  height: 22px;
+}
+
+.login-error {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--red-600);
+}
+
+.login-submit {
+  width: 100%;
+  margin-top: var(--sp-1);
+}
+
+.login-alt {
+  margin: 0;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.login-alt a {
+  font-weight: 800;
+  color: var(--teal-700);
+  text-decoration: none;
+}
+
+.login-alt a:hover,
+.login-alt a:focus-visible {
+  color: var(--green-600);
+  text-decoration: underline;
+}
+
+/* short screens: keep the form above the fixed info bar */
+@media (max-height: 720px) {
+  .kiosk-header .kiosk-logo { height: 88px; }
+  .kiosk-sub { display: none; }
+
+  .login-card {
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+  }
+
+  .login-submit {
+    min-height: var(--tap);
+    font-size: var(--text-lg);
+  }
+}
+
+@media (max-height: 600px) {
+  .login-alt { display: none; }
+}

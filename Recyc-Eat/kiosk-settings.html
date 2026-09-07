@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Kiosk Settings — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="kiosk-settings.css" />
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text"><strong>EcoNova</strong></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>Dashboard</a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link" href="items-collected.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Items Collected</a>
+        <a class="nav-link" href="redemption-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>Redemptions</a>
+        <a class="nav-link" href="food-inventory.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Food Inventory</a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
+        <a class="nav-link is-active" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
+      </nav>
+      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Kiosk Settings</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Kiosk Settings</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Kiosk Settings</h1>
+            <p>Configure points, redemption rules, rewards, and kiosk operation.</p>
+          </div>
+        </div>
+
+        <form class="settings-grid" id="settingsForm">
+          <section class="card settings-group">
+            <div class="card-header"><h2>Points per item</h2></div>
+            <div class="card-body">
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Small plastic bottle</h3>
+                  <p>Points awarded when a standard plastic bottle is accepted.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" max="50" id="pointsSmallBottle" required />
+                  <div class="hint">Default: 5</div>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Big plastic bottle</h3>
+                  <p>Points for larger bottles detected by the kiosk.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" max="50" id="pointsBigBottle" required />
+                  <div class="hint">Default: 7</div>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Aluminum can</h3>
+                  <p>Points awarded for each accepted aluminum can.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" max="50" id="pointsCan" required />
+                  <div class="hint">Default: 5</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card settings-group">
+            <div class="card-header"><h2>Redemption rules</h2></div>
+            <div class="card-body">
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Redemption threshold</h3>
+                  <p>Minimum points required on a receipt before a full meal reward can be redeemed.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="redemptionThreshold" required />
+                  <div class="hint">Matches kiosk meal unlock</div>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Minimum redemption</h3>
+                  <p>Lowest points that can be spent in a single redemption.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="minRedemption" required />
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Maximum redemption</h3>
+                  <p>Caps how many points can be redeemed at once.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="maxRedemption" required />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card settings-group">
+            <div class="card-header"><h2>Reward point costs</h2></div>
+            <div class="card-body">
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Canned meal</h3>
+                  <p>Points required to redeem a standard canned meal.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="rewardMealPoints" required />
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Snack pack</h3>
+                  <p>Points required for a smaller snack reward.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="rewardSnackPoints" required />
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Available rewards</h3>
+                  <p>Reward items currently offered at this kiosk (one per line).</p>
+                </div>
+                <div class="setting-control">
+                  <textarea class="textarea" id="availableRewards" rows="4">Canned Meal A
+Canned Meal B
+Canned Meal C
+Snack Pack
+Fruit Cup</textarea>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card settings-group">
+            <div class="card-header"><h2>Kiosk operations</h2></div>
+            <div class="card-body">
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Kiosk open for use</h3>
+                  <p>When off, the public kiosk shows a temporarily unavailable message.</p>
+                </div>
+                <div class="setting-control">
+                  <label class="switch" aria-label="Kiosk open">
+                    <input type="checkbox" id="kioskOpen" />
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Auto-print receipts</h3>
+                  <p>Print a QR receipt automatically after a successful session.</p>
+                </div>
+                <div class="setting-control">
+                  <label class="switch" aria-label="Auto print">
+                    <input type="checkbox" id="autoPrint" />
+                    <span></span>
+                  </label>
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Idle session timeout (seconds)</h3>
+                  <p>Return to the home screen after this many seconds of inactivity.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="30" max="600" id="sessionTimeout" required />
+                </div>
+              </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Low-stock alert threshold</h3>
+                  <p>Flag inventory items when remaining quantity falls to this number or below.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="number" min="1" id="lowStockAlert" required />
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="settings-actions">
+            <button class="btn btn-ghost" type="button" id="resetBtn">Reset to defaults</button>
+            <button class="btn btn-primary" type="submit">Save Changes</button>
+          </div>
+        </form>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    const fields = [
+      "pointsSmallBottle",
+      "pointsBigBottle",
+      "pointsCan",
+      "redemptionThreshold",
+      "minRedemption",
+      "maxRedemption",
+      "rewardMealPoints",
+      "rewardSnackPoints",
+      "sessionTimeout",
+      "lowStockAlert",
+    ];
+
+    const toggles = ["kioskOpen", "autoPrint"];
+
+    function fillForm(data) {
+      fields.forEach((id) => {
+        document.getElementById(id).value = data[id];
+      });
+      toggles.forEach((id) => {
+        document.getElementById(id).checked = Boolean(data[id]);
+      });
+      if (data.availableRewards) {
+        document.getElementById("availableRewards").value = data.availableRewards;
+      }
+    }
+
+    function readForm() {
+      const data = {};
+      fields.forEach((id) => {
+        data[id] = Number(document.getElementById(id).value);
+      });
+      toggles.forEach((id) => {
+        data[id] = document.getElementById(id).checked;
+      });
+      data.availableRewards = document.getElementById("availableRewards").value.trim();
+      return data;
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const current = AdminData.getSettings();
+      if (!current.availableRewards) {
+        current.availableRewards = document.getElementById("availableRewards").value.trim();
+      }
+      fillForm(current);
+
+      document.getElementById("settingsForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const data = readForm();
+        if (data.minRedemption > data.maxRedemption) {
+          AdminUI.toast("Invalid limits", "Minimum redemption cannot exceed maximum.", "error");
+          return;
+        }
+        AdminData.saveSettings(data);
+        AdminUI.toast("Settings saved", "Kiosk configuration updated successfully.");
+      });
+
+      document.getElementById("resetBtn").addEventListener("click", () => {
+        localStorage.removeItem("econova_admin_settings");
+        fillForm(AdminData.getSettings());
+        document.getElementById("availableRewards").value = `Canned Meal A
+Canned Meal B
+Canned Meal C
+Snack Pack
+Fruit Cup`;
+        AdminUI.toast("Defaults restored", "Review values, then click Save Changes.");
+      });
+    });
+  </script>
+</body>
+</html>

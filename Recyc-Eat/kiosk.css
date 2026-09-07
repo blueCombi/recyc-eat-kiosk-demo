@@ -556,7 +556,7 @@ button.kiosk-ring:active { transform: scale(0.98); }
     --info-h:   66px;
   }
 
-  .kiosk-logo { height: 48px; }
+  .kiosk-logo { height: 120px; }
   .kiosk-btn--lg { min-height: 56px; }
   .kiosk-progress .step-dot { width: 26px; height: 26px; }
 }

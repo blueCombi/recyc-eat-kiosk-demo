@@ -1,0 +1,20 @@
+/* Items Collected — page-specific styles.
+   Shared admin shell lives in admin-shared.css */
+
+.items-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.items-charts {
+  margin-bottom: 20px;
+}
+
+.items-history .table .num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 880px) {
+  .items-summary {
+    grid-template-columns: 1fr;
+  }
+}

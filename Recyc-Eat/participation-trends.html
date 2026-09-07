@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Participation Trends — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="participation-trends.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text"><strong>EcoNova</strong></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>Dashboard</a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link" href="items-collected.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Items Collected</a>
+        <a class="nav-link" href="redemption-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>Redemptions</a>
+        <a class="nav-link" href="food-inventory.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Food Inventory</a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link is-active" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
+        <a class="nav-link" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
+      </nav>
+      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Participation Trends</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Participation Trends</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Participation Trends</h1>
+            <p>Active users, new sign-ups, collections, and redemptions over time.</p>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="field">
+            <label for="fromDate">From</label>
+            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+          </div>
+          <div class="field">
+            <label for="toDate">To</label>
+            <input class="input" type="date" id="toDate" value="2026-09-07" />
+          </div>
+          <div class="field">
+            <label for="grain">Trend grain</label>
+            <select class="select" id="grain">
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </div>
+          <button class="btn btn-primary" type="button" id="applyFilters">Update charts</button>
+        </div>
+
+        <section class="stat-grid trends-summary">
+          <article class="card stat-card">
+            <div class="stat-card__label">Active participants</div>
+            <div class="stat-card__value" id="statActive">0</div>
+            <span class="stat-card__trend trend-up">↑ Growing</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">New this period</div>
+            <div class="stat-card__value" id="statNew">0</div>
+            <span class="stat-card__trend trend-up">Joined recently</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Items collected</div>
+            <div class="stat-card__value" id="statItems">0</div>
+            <span class="stat-card__trend trend-flat">In selected range</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Redemptions</div>
+            <div class="stat-card__value" id="statRedeems">0</div>
+            <span class="stat-card__trend trend-flat">Completed + pending</span>
+          </article>
+        </section>
+
+        <section class="grid-2 trends-charts">
+          <article class="card">
+            <div class="card-header"><h2>Active &amp; new participants</h2></div>
+            <div class="card-body">
+              <div class="chart-wrap"><canvas id="participantsChart"></canvas></div>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-header"><h2>Items vs redemptions</h2></div>
+            <div class="card-body">
+              <div class="chart-wrap"><canvas id="activityChart"></canvas></div>
+            </div>
+          </article>
+        </section>
+
+        <section class="card">
+          <div class="card-header"><h2>Trend summary</h2></div>
+          <div class="table-wrap">
+            <table class="table trends-summary-table">
+              <thead>
+                <tr>
+                  <th>Period</th>
+                  <th>Active</th>
+                  <th>New</th>
+                  <th>Items</th>
+                  <th>Redemptions</th>
+                </tr>
+              </thead>
+              <tbody id="summaryBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    let participantsChart, activityChart;
+
+    function buildSeries(grain) {
+      const base = AdminData.dailySeries;
+      if (grain === "daily") {
+        return {
+          labels: base.labels,
+          active: base.activeParticipants,
+          neu: base.newParticipants,
+          items: base.items,
+          redeems: base.redemptions,
+        };
+      }
+
+      if (grain === "weekly") {
+        const mid = Math.ceil(base.labels.length / 2);
+        const sum = (arr, a, b) => arr.slice(a, b).reduce((s, n) => s + n, 0);
+        return {
+          labels: ["Week 1", "Week 2"],
+          active: [base.activeParticipants[mid - 1], base.activeParticipants.at(-1)],
+          neu: [sum(base.newParticipants, 0, mid), sum(base.newParticipants, mid)],
+          items: [sum(base.items, 0, mid), sum(base.items, mid)],
+          redeems: [sum(base.redemptions, 0, mid), sum(base.redemptions, mid)],
+        };
+      }
+
+      return {
+        labels: ["Sep 2026"],
+        active: [base.activeParticipants.at(-1)],
+        neu: [base.newParticipants.reduce((s, n) => s + n, 0)],
+        items: [base.items.reduce((s, n) => s + n, 0)],
+        redeems: [base.redemptions.reduce((s, n) => s + n, 0)],
+      };
+    }
+
+    function render() {
+      const grain = document.getElementById("grain").value;
+      const series = buildSeries(grain);
+
+      document.getElementById("statActive").textContent = AdminUI.formatNumber(series.active.at(-1) || 0);
+      document.getElementById("statNew").textContent = AdminUI.formatNumber(series.neu.reduce((s, n) => s + n, 0));
+      document.getElementById("statItems").textContent = AdminUI.formatNumber(series.items.reduce((s, n) => s + n, 0));
+      document.getElementById("statRedeems").textContent = AdminUI.formatNumber(series.redeems.reduce((s, n) => s + n, 0));
+
+      document.getElementById("summaryBody").innerHTML = series.labels.map((label, i) => `
+        <tr>
+          <td>${label}</td>
+          <td class="num">${series.active[i]}</td>
+          <td class="num">${series.neu[i]}</td>
+          <td class="num">${series.items[i]}</td>
+          <td class="num">${series.redeems[i]}</td>
+        </tr>`).join("");
+
+      if (participantsChart) participantsChart.destroy();
+      participantsChart = new Chart(document.getElementById("participantsChart"), {
+        type: "line",
+        data: {
+          labels: series.labels,
+          datasets: [
+            {
+              label: "Active",
+              data: series.active,
+              borderColor: "#167f77",
+              backgroundColor: "rgba(22,127,119,0.12)",
+              fill: true,
+              tension: 0.35,
+            },
+            {
+              label: "New",
+              data: series.neu,
+              borderColor: "#2fa04e",
+              backgroundColor: "transparent",
+              tension: 0.35,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+      });
+
+      if (activityChart) activityChart.destroy();
+      activityChart = new Chart(document.getElementById("activityChart"), {
+        type: "bar",
+        data: {
+          labels: series.labels,
+          datasets: [
+            {
+              label: "Items collected",
+              data: series.items,
+              backgroundColor: "rgba(31,162,143,0.8)",
+              borderRadius: 8,
+            },
+            {
+              label: "Redemptions",
+              data: series.redeems,
+              backgroundColor: "rgba(47,160,78,0.65)",
+              borderRadius: 8,
+            },
+          ],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: "bottom" } },
+          scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+        },
+      });
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      document.getElementById("applyFilters").addEventListener("click", render);
+      render();
+    });
+  </script>
+</body>
+</html>

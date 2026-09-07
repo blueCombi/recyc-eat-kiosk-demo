@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Food Inventory — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="food-inventory.css" />
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text"><strong>EcoNova</strong></div>
+      </div>
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link" href="dashboard.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>Dashboard</a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link" href="items-collected.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>Items Collected</a>
+        <a class="nav-link" href="redemption-history.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>Redemptions</a>
+        <a class="nav-link is-active" href="food-inventory.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>Food Inventory</a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
+        <a class="nav-link" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
+      </nav>
+      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Food Inventory</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Food Inventory</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Food Inventory</h1>
+            <p>Track stock levels, restock items, and manage reward food products.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn-primary" type="button" id="addItemBtn">+ Add item</button>
+          </div>
+        </div>
+
+        <section class="stat-grid inventory-summary" id="invStats">
+          <article class="card stat-card">
+            <div class="stat-card__label">Total SKUs</div>
+            <div class="stat-card__value" id="statSkus">0</div>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Units remaining</div>
+            <div class="stat-card__value" id="statUnits">0</div>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Low stock</div>
+            <div class="stat-card__value" id="statLow">0</div>
+            <span class="stat-card__trend trend-down">Needs restock</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__label">Out of stock</div>
+            <div class="stat-card__value" id="statOut">0</div>
+            <span class="stat-card__trend trend-down">Unavailable</span>
+          </article>
+        </section>
+
+        <section class="grid-2 inventory-panels">
+          <article class="card">
+            <div class="card-header"><h2>Current inventory</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>SKU</th>
+                    <th>Level</th>
+                    <th>Status</th>
+                    <th>Updated</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryBody"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header"><h2>Recent inventory changes</h2></div>
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Item</th>
+                    <th>Change</th>
+                    <th>Reason</th>
+                  </tr>
+                </thead>
+                <tbody id="logBody"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Add / Edit modal -->
+  <div class="modal-backdrop" id="itemModal" role="dialog" aria-modal="true" aria-labelledby="itemModalTitle">
+    <div class="modal modal--lg">
+      <div class="modal-header">
+        <h3 id="itemModalTitle">Add inventory item</h3>
+        <button class="btn btn-ghost btn-icon" type="button" data-close="itemModal" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="itemForm">
+        <input type="hidden" id="itemId" />
+        <div class="field inventory-form-field">
+          <label for="itemName">Item name</label>
+          <input class="input" id="itemName" required />
+        </div>
+        <div class="field inventory-form-field">
+          <label for="itemSku">SKU</label>
+          <input class="input" id="itemSku" required />
+        </div>
+        <div class="inventory-form-grid">
+          <div class="field">
+            <label for="itemQty">Quantity</label>
+            <input class="input" type="number" min="0" id="itemQty" required />
+          </div>
+          <div class="field">
+            <label for="itemCapacity">Capacity</label>
+            <input class="input" type="number" min="1" id="itemCapacity" required />
+          </div>
+          <div class="field">
+            <label for="itemUnit">Unit</label>
+            <input class="input" id="itemUnit" placeholder="cans" required />
+          </div>
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" data-close="itemModal">Cancel</button>
+        <button class="btn btn-primary" type="submit" form="itemForm">Save item</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete confirm -->
+  <div class="modal-backdrop" id="deleteModal" role="dialog" aria-modal="true">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>Remove inventory item?</h3>
+        <button class="btn btn-ghost btn-icon" type="button" data-close="deleteModal" aria-label="Close">✕</button>
+      </div>
+      <div class="modal-body">
+        <p id="deleteMessage">This will permanently remove the item from inventory.</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" data-close="deleteModal">Cancel</button>
+        <button class="btn btn-danger" type="button" id="confirmDelete">Remove</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let pendingDeleteId = null;
+
+    function statusBadge(status) {
+      if (status === "out") return `<span class="badge badge-danger">Out of stock</span>`;
+      if (status === "low") return `<span class="badge badge-warning">Low stock</span>`;
+      return `<span class="badge badge-success">In stock</span>`;
+    }
+
+    function render() {
+      const items = AdminData.getInventory();
+      document.getElementById("statSkus").textContent = items.length;
+      document.getElementById("statUnits").textContent = AdminUI.formatNumber(items.reduce((s, i) => s + i.qty, 0));
+      document.getElementById("statLow").textContent = items.filter((i) => i.status === "low").length;
+      document.getElementById("statOut").textContent = items.filter((i) => i.status === "out").length;
+
+      document.getElementById("inventoryBody").innerHTML = items.map((item) => {
+        const pct = Math.min(100, Math.round((item.qty / item.capacity) * 100));
+        const barClass = item.status === "out" ? "is-out" : item.status === "low" ? "is-low" : "";
+        return `<tr>
+          <td>
+            <strong>${AdminUI.escapeHtml(item.name)}</strong>
+            <div class="inventory-level">
+              <div class="inventory-meta"><span>${item.qty} / ${item.capacity} ${AdminUI.escapeHtml(item.unit)}</span><span>${pct}%</span></div>
+              <div class="progress"><div class="progress__bar ${barClass}" style="width:${pct}%"></div></div>
+            </div>
+          </td>
+          <td>${AdminUI.escapeHtml(item.sku)}</td>
+          <td class="num">${item.qty}</td>
+          <td>${statusBadge(item.status)}</td>
+          <td>${AdminUI.formatDateTime(item.updated)}</td>
+          <td>
+            <div class="inventory-actions">
+              <button class="btn btn-ghost btn-sm" type="button" data-edit="${item.id}">Edit</button>
+              <button class="btn btn-ghost btn-sm" type="button" data-delete="${item.id}">Remove</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join("");
+
+      document.getElementById("logBody").innerHTML = AdminData.inventoryLog.map((log) => `
+        <tr>
+          <td>${AdminUI.formatDateTime(log.at)}</td>
+          <td>${AdminUI.escapeHtml(log.item)}</td>
+          <td class="num ${log.change < 0 ? "change-negative" : "change-positive"}">${log.change > 0 ? "+" : ""}${log.change}</td>
+          <td>${AdminUI.escapeHtml(log.reason)}</td>
+        </tr>`).join("");
+    }
+
+    function openAdd() {
+      document.getElementById("itemModalTitle").textContent = "Add inventory item";
+      document.getElementById("itemForm").reset();
+      document.getElementById("itemId").value = "";
+      AdminUI.openModal("itemModal");
+    }
+
+    function openEdit(id) {
+      const item = AdminData.getInventory().find((i) => i.id === id);
+      if (!item) return;
+      document.getElementById("itemModalTitle").textContent = "Edit inventory item";
+      document.getElementById("itemId").value = item.id;
+      document.getElementById("itemName").value = item.name;
+      document.getElementById("itemSku").value = item.sku;
+      document.getElementById("itemQty").value = item.qty;
+      document.getElementById("itemCapacity").value = item.capacity;
+      document.getElementById("itemUnit").value = item.unit;
+      AdminUI.openModal("itemModal");
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      render();
+
+      document.getElementById("addItemBtn").addEventListener("click", openAdd);
+
+      document.querySelectorAll("[data-close]").forEach((btn) => {
+        btn.addEventListener("click", () => AdminUI.closeModal(btn.getAttribute("data-close")));
+      });
+
+      document.getElementById("inventoryBody").addEventListener("click", (e) => {
+        const editId = e.target.getAttribute("data-edit");
+        const deleteId = e.target.getAttribute("data-delete");
+        if (editId) openEdit(editId);
+        if (deleteId) {
+          pendingDeleteId = deleteId;
+          const item = AdminData.getInventory().find((i) => i.id === deleteId);
+          document.getElementById("deleteMessage").textContent =
+            `Remove “${item?.name || "this item"}” from inventory? This cannot be undone.`;
+          AdminUI.openModal("deleteModal");
+        }
+      });
+
+      document.getElementById("confirmDelete").addEventListener("click", () => {
+        if (!pendingDeleteId) return;
+        AdminData.setInventory(AdminData.getInventory().filter((i) => i.id !== pendingDeleteId));
+        pendingDeleteId = null;
+        AdminUI.closeModal("deleteModal");
+        AdminUI.toast("Item removed", "Inventory updated successfully.");
+        render();
+      });
+
+      document.getElementById("itemForm").addEventListener("submit", (e) => {
+        e.preventDefault();
+        const id = document.getElementById("itemId").value;
+        const payload = {
+          id: id || `F-${String(Date.now()).slice(-4)}`,
+          name: document.getElementById("itemName").value.trim(),
+          sku: document.getElementById("itemSku").value.trim(),
+          qty: Number(document.getElementById("itemQty").value),
+          capacity: Number(document.getElementById("itemCapacity").value),
+          unit: document.getElementById("itemUnit").value.trim(),
+          updated: new Date().toISOString(),
+        };
+        const list = AdminData.getInventory();
+        if (id) {
+          AdminData.setInventory(list.map((i) => (i.id === id ? payload : i)));
+          AdminUI.toast("Item updated", `${payload.name} was saved.`);
+        } else {
+          AdminData.setInventory([payload, ...list]);
+          AdminUI.toast("Item added", `${payload.name} is now in inventory.`);
+        }
+        AdminUI.closeModal("itemModal");
+        render();
+      });
+    });
+  </script>
+</body>
+</html>

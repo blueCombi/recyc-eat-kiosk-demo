@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard — EcoNova Admin</title>
+  <link rel="stylesheet" href="admin-shared.css" />
+  <link rel="stylesheet" href="dashboard.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
+  <script src="admin-shared.js" defer></script>
+</head>
+<body>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="admin-app">
+    <aside class="admin-sidebar" id="adminSidebar">
+      <div class="sidebar-brand">
+        <img src="logo.png" alt="EcoNova" />
+        <div class="sidebar-brand__text">
+          <strong>EcoNova</strong>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" aria-label="Admin">
+        <p class="nav-section">Overview</p>
+        <a class="nav-link is-active" href="dashboard.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 13h6V4H4v9zm10 7h6V4h-6v16zM4 20h6v-5H4v5zm10-9h6V4h-6v7z"/></svg>
+          Dashboard
+        </a>
+        <p class="nav-section">Operations</p>
+        <a class="nav-link" href="items-collected.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          Items Collected
+        </a>
+        <a class="nav-link" href="redemption-history.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4zm0 4v11a1 1 0 001 1h12a1 1 0 001-1V8"/></svg>
+          Redemptions
+        </a>
+        <a class="nav-link" href="food-inventory.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
+          Food Inventory
+        </a>
+        <p class="nav-section">Insights</p>
+        <a class="nav-link" href="participation-trends.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>
+          Participation Trends
+        </a>
+        <a class="nav-link" href="kiosk-settings.html">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>
+          Kiosk Settings
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="recycling.html">← Back to kiosk</a>
+      </div>
+    </aside>
+
+    <div class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button class="menu-toggle" id="menuToggle" type="button" aria-label="Open menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+          </button>
+          <h1 class="topbar-title">Dashboard</h1>
+        </div>
+        <div class="topbar-right">
+          <div class="admin-avatar">
+            <span class="admin-avatar__mark">AD</span>
+            <div class="admin-avatar__meta">
+              <strong>Admin</strong>
+              <span>EcoNova Staff</span>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <ul class="breadcrumbs">
+          <li><a href="dashboard.html">Admin</a></li>
+          <li class="sep">/</li>
+          <li>Dashboard</li>
+        </ul>
+
+        <div class="page-header">
+          <div>
+            <h1>Dashboard Overview</h1>
+            <p>Key recycling and redemption metrics at a glance.</p>
+          </div>
+          <div class="page-actions">
+            <span class="badge badge-neutral" id="lastUpdated">Updated just now</span>
+          </div>
+        </div>
+
+        <section class="stat-grid dashboard-stats" id="statGrid" aria-label="Key statistics">
+          <article class="card stat-card">
+            <div class="stat-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16v10H4zM8 7V5h8v2"/></svg></div>
+            <div class="stat-card__label">Total Items Collected</div>
+            <div class="stat-card__value" id="statItems">—</div>
+            <span class="stat-card__trend trend-up">↑ 12% vs last week</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v8m-4-4h8M5 4h14l1 4H4l1-4z"/></svg></div>
+            <div class="stat-card__label">Total Redemptions</div>
+            <div class="stat-card__value" id="statRedemptions">—</div>
+            <span class="stat-card__trend trend-up">↑ 8% vs last week</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/></svg></div>
+            <div class="stat-card__label">Food Inventory Remaining</div>
+            <div class="stat-card__value" id="statInventory">—</div>
+            <span class="stat-card__trend trend-down" id="inventoryTrend">↓ 2 items low stock</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div>
+            <div class="stat-card__label">Total Participants</div>
+            <div class="stat-card__value" id="statParticipants">—</div>
+            <span class="stat-card__trend trend-up">↑ 5 new this week</span>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-card__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <div class="stat-card__label">Points in Circulation</div>
+            <div class="stat-card__value" id="statPoints">—</div>
+            <span class="stat-card__trend trend-flat">→ Stable this week</span>
+          </article>
+        </section>
+
+        <section class="grid-2">
+          <article class="card">
+            <div class="card-header">
+              <h2>Items collected — last 7 days</h2>
+              <a class="btn btn-ghost btn-sm" href="items-collected.html">View all</a>
+            </div>
+            <div class="card-body">
+              <div class="chart-wrap">
+                <canvas id="itemsChart" aria-label="Items collected chart"></canvas>
+              </div>
+            </div>
+          </article>
+
+          <article class="card dashboard-alerts">
+            <div class="card-header">
+              <h2>Inventory alerts</h2>
+              <a class="btn btn-ghost btn-sm" href="food-inventory.html">Manage</a>
+            </div>
+            <div class="card-body" id="alertList"></div>
+          </article>
+        </section>
+
+        <section class="card dashboard-activity">
+          <div class="card-header">
+            <h2>Recent activity</h2>
+            <a class="btn btn-ghost btn-sm" href="redemption-history.html">Redemptions</a>
+          </div>
+          <div class="table-wrap">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Detail</th>
+                  <th>Points</th>
+                  <th>Receipt ID</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="activityBody"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const items = AdminData.collections.reduce((s, c) => s + c.qty, 0);
+      const redemptions = AdminData.redemptions.filter((r) => r.status === "completed").length;
+      const inventory = AdminData.getInventory();
+      const remaining = inventory.reduce((s, i) => s + i.qty, 0);
+      const low = inventory.filter((i) => i.status === "low" || i.status === "out");
+      const points = AdminData.collections.reduce((s, c) => s + c.points, 0)
+        - AdminData.redemptions.filter((r) => r.status === "completed").reduce((s, r) => s + r.points, 0);
+
+      document.getElementById("statItems").textContent = AdminUI.formatNumber(items);
+      document.getElementById("statRedemptions").textContent = AdminUI.formatNumber(redemptions);
+      document.getElementById("statInventory").textContent = AdminUI.formatNumber(remaining);
+      document.getElementById("statParticipants").textContent = AdminUI.formatNumber(AdminData.participants.length);
+      document.getElementById("statPoints").textContent = AdminUI.formatNumber(Math.max(points, 0));
+      document.getElementById("inventoryTrend").textContent =
+        low.length ? `↓ ${low.length} need attention` : "→ Stock healthy";
+      document.getElementById("inventoryTrend").className =
+        "stat-card__trend " + (low.length ? "trend-down" : "trend-flat");
+
+      const alertList = document.getElementById("alertList");
+      if (!low.length) {
+        alertList.innerHTML = `<div class="state-box"><strong>All stocked</strong><p>No low or out-of-stock items.</p></div>`;
+      } else {
+        alertList.innerHTML = low.map((item) => {
+          const pct = Math.round((item.qty / item.capacity) * 100);
+          const badge = item.status === "out"
+            ? `<span class="badge badge-danger">Out of stock</span>`
+            : `<span class="badge badge-warning">Low stock</span>`;
+          return `
+            <div style="margin-bottom:16px">
+              <div class="inventory-meta">
+                <span>${AdminUI.escapeHtml(item.name)}</span>
+                ${badge}
+              </div>
+              <div class="progress"><div class="progress__bar ${item.status === "out" ? "is-out" : "is-low"}" style="width:${pct}%"></div></div>
+              <div class="inventory-meta" style="margin-top:6px;margin-bottom:0">
+                <span>${item.qty} / ${item.capacity} ${item.unit}</span>
+              </div>
+            </div>`;
+        }).join("");
+      }
+
+      const recent = [
+        ...AdminData.collections.slice(-4).map((c) => ({
+          when: c.date, type: "Collection", detail: `${c.qty} × ${c.type}`, points: c.points, receiptId: c.receiptId, status: "completed"
+        })),
+        ...AdminData.redemptions.slice(-4).map((r) => ({
+          when: r.date, type: "Redemption", detail: r.item, points: r.points, receiptId: r.receiptId, status: r.status
+        })),
+      ].sort((a, b) => new Date(b.when) - new Date(a.when)).slice(0, 6);
+
+      document.getElementById("activityBody").innerHTML = recent.map((row) => {
+        const badgeClass = {
+          completed: "badge-success",
+          pending: "badge-warning",
+        }[row.status] || "badge-success";
+        return `<tr>
+          <td>${AdminUI.formatDateTime(row.when)}</td>
+          <td>${row.type}</td>
+          <td>${AdminUI.escapeHtml(row.detail)}</td>
+          <td class="num">${row.points}</td>
+          <td>${AdminUI.escapeHtml(row.receiptId)}</td>
+          <td><span class="badge ${badgeClass}">${row.status}</span></td>
+        </tr>`;
+      }).join("");
+
+      const series = AdminData.dailySeries;
+      new Chart(document.getElementById("itemsChart"), {
+        type: "bar",
+        data: {
+          labels: series.labels,
+          datasets: [{
+            label: "Items",
+            data: series.items,
+            backgroundColor: "rgba(31, 162, 143, 0.75)",
+            borderRadius: 8,
+            maxBarThickness: 36,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { beginAtZero: true, ticks: { precision: 0 } },
+          },
+        },
+      });
+    });
+  </script>
+</body>
+</html>

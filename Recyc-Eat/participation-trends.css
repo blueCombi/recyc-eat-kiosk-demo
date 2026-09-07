@@ -1,0 +1,26 @@
+/* Participation Trends — page-specific styles.
+   Shared admin shell lives in admin-shared.css */
+
+.trends-summary {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.trends-charts {
+  margin-bottom: 20px;
+}
+
+.trends-summary-table .num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 960px) {
+  .trends-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .trends-summary {
+    grid-template-columns: 1fr;
+  }
+}

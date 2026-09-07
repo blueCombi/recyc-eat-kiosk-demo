@@ -1,0 +1,15 @@
+/* Redemption History — page-specific styles.
+   Shared admin shell lives in admin-shared.css */
+
+.redemptions-toolbar .field--grow {
+  min-width: 220px;
+}
+
+.redemptions-table .badge {
+  text-transform: capitalize;
+}
+
+.redemptions-foot[hidden],
+.redemptions-wrap[hidden] {
+  display: none !important;
+}

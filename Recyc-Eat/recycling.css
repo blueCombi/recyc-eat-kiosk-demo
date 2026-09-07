@@ -3,6 +3,45 @@
 
 .kiosk-shell { max-width: 640px; }
 
+.signin-link {
+  position: fixed;
+  top: var(--sp-4);
+  right: var(--sp-4);
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  color: var(--teal-700);
+  background: var(--surface);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-1);
+  text-decoration: none;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+}
+
+.signin-link svg {
+  width: 24px;
+  height: 24px;
+}
+
+.signin-link:hover,
+.signin-link:focus-visible {
+  background: var(--teal-050);
+  color: var(--green-600);
+  border-color: var(--teal-100);
+}
+
+.signin-link:active {
+  transform: translateY(1px);
+}
+
+.signin-link:focus-visible {
+  outline: 3px solid var(--teal-500);
+  outline-offset: 2px;
+}
+
 /* the illustration is the only flexible block here, so let it give up
    height first and keep the headline and buttons on screen */
 .hero-art {
@@ -31,6 +70,12 @@
 
 @media (max-width: 720px) {
   .hero-art { width: min(300px, 78%); }
+  .signin-link {
+    top: var(--sp-3);
+    right: var(--sp-3);
+    width: 48px;
+    height: 48px;
+  }
 }
 
 @media (max-height: 760px) {

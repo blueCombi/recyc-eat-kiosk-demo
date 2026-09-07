@@ -1,0 +1,32 @@
+/* Dashboard Overview — page-specific styles.
+   Shared admin shell lives in admin-shared.css */
+
+.dashboard-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.dashboard-alerts .inventory-meta:last-child {
+  margin-bottom: 0;
+}
+
+.dashboard-activity {
+  margin-top: 0;
+}
+
+@media (max-width: 1200px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 880px) {
+  .dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-stats {
+    grid-template-columns: 1fr;
+  }
+}
