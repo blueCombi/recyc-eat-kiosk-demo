@@ -48,7 +48,7 @@
         <div class="login-field">
           <div class="login-label-row">
             <label class="login-label" for="password">Password</label>
-            <a href="#" class="login-forgot">Forgot password?</a>
+            <a href="#" class="login-forgot" id="forgotPassword">Forgot password?</a>
           </div>
           <div class="login-password-wrap">
             <input
@@ -79,7 +79,7 @@
 
         <p class="login-error" id="loginError" role="alert" hidden></p>
 
-        <button class="kiosk-btn kiosk-btn--primary kiosk-btn--lg login-submit" type="submit">
+        <button class="kiosk-btn kiosk-btn--primary kiosk-btn--lg login-submit" type="submit" id="loginBtn">
           LOG IN <span aria-hidden="true">&rarr;</span>
         </button>
       </form>
@@ -97,36 +97,126 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    const form = document.getElementById("loginForm");
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
-    const errorText = document.getElementById("loginError");
-    const toggle = document.getElementById("togglePassword");
-    const showIcon = toggle.querySelector(".login-toggle__icon--show");
-    const hideIcon = toggle.querySelector(".login-toggle__icon--hide");
+  <script type="module">
+    import {
+      getAuth,
+      signInWithEmailAndPassword,
+      sendPasswordResetEmail,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 
+    // ── Firebase config ──────────────────────────────────────────
+    const firebaseConfig = {
+      apiKey: "AIzaSyCAQZstw1qOUltsN_HKPZE7qNI2uRRWpwU",
+      authDomain: "recyc-eat.firebaseapp.com",
+      projectId: "recyc-eat",
+      storageBucket: "recyc-eat.firebasestorage.app",
+      messagingSenderId: "45738414086",
+      appId: "1:45738414086:web:90b0f800476683c77d3387"
+    };
+
+    const app  = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // ── If already logged in, skip to dashboard ──────────────────
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "dashboard.html";
+      }
+    });
+
+    // ── DOM refs ─────────────────────────────────────────────────
+    const form      = document.getElementById("loginForm");
+    const emailEl   = document.getElementById("email");
+    const passEl    = document.getElementById("password");
+    const errorEl   = document.getElementById("loginError");
+    const loginBtn  = document.getElementById("loginBtn");
+    const toggle    = document.getElementById("togglePassword");
+    const showIcon  = toggle.querySelector(".login-toggle__icon--show");
+    const hideIcon  = toggle.querySelector(".login-toggle__icon--hide");
+    const forgotBtn = document.getElementById("forgotPassword");
+
+    // ── Password show/hide ───────────────────────────────────────
     toggle.addEventListener("click", () => {
-      const revealing = password.type === "password";
-      password.type = revealing ? "text" : "password";
+      const revealing = passEl.type === "password";
+      passEl.type = revealing ? "text" : "password";
       toggle.setAttribute("aria-pressed", String(revealing));
       toggle.setAttribute("aria-label", revealing ? "Hide password" : "Show password");
       showIcon.hidden = revealing;
       hideIcon.hidden = !revealing;
     });
 
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
-      errorText.hidden = true;
+    // ── Show error helper ────────────────────────────────────────
+    function showError(msg) {
+      errorEl.textContent = msg;
+      errorEl.hidden = false;
+    }
 
-      if (!email.value.trim() || !password.value) {
-        errorText.textContent = "Please enter your email and password.";
-        errorText.hidden = false;
+    function clearError() {
+      errorEl.hidden = true;
+      errorEl.textContent = "";
+    }
+
+    // ── Friendly Firebase error messages ─────────────────────────
+    function friendlyError(code) {
+      switch (code) {
+        case "auth/invalid-email":          return "Please enter a valid email address.";
+        case "auth/user-not-found":         return "No account found with that email.";
+        case "auth/wrong-password":         return "Incorrect password. Please try again.";
+        case "auth/invalid-credential":     return "Incorrect email or password. Please try again.";
+        case "auth/too-many-requests":      return "Too many failed attempts. Please try again later.";
+        case "auth/network-request-failed": return "Network error. Please check your connection.";
+        default:                            return "Login failed. Please try again.";
+      }
+    }
+
+    // ── Login form submit ─────────────────────────────────────────
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      clearError();
+
+      const emailVal = emailEl.value.trim();
+      const passVal  = passEl.value;
+
+      if (!emailVal || !passVal) {
+        showError("Please enter your email and password.");
         return;
       }
 
-      // Demo: continue to admin console. Wire real auth later.
-      window.location.href = "dashboard.html";
+      // show loading state
+      loginBtn.disabled = true;
+      loginBtn.textContent = "Signing in…";
+
+      try {
+        await signInWithEmailAndPassword(auth, emailVal, passVal);
+        // onAuthStateChanged above will redirect to dashboard
+      } catch (err) {
+        showError(friendlyError(err.code));
+        loginBtn.disabled = false;
+        loginBtn.innerHTML = 'LOG IN <span aria-hidden="true">&rarr;</span>';
+      }
+    });
+
+    // ── Forgot password ───────────────────────────────────────────
+    forgotBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const emailVal = emailEl.value.trim();
+
+      if (!emailVal) {
+        showError("Enter your email address first, then click Forgot password.");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, emailVal);
+        clearError();
+        errorEl.style.color = "var(--teal-700)";
+        errorEl.textContent = "Password reset email sent! Check your inbox.";
+        errorEl.hidden = false;
+      } catch (err) {
+        showError(friendlyError(err.code));
+      }
     });
   </script>
 </body>
