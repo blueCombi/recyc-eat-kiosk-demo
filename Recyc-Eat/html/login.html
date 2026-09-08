@@ -99,30 +99,35 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module">
     import {
-      getAuth,
       signInWithEmailAndPassword,
       sendPasswordResetEmail,
       onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    // one Firebase app for the whole site, and the session-only persistence
+    // it configures — a sign-in ends when the browser closes
+    import { auth, authReady } from "../js/firebase-config.js";
 
-    // ── Firebase config ──────────────────────────────────────────
-    const firebaseConfig = {
-      apiKey: "AIzaSyCAQZstw1qOUltsN_HKPZE7qNI2uRRWpwU",
-      authDomain: "recyc-eat.firebaseapp.com",
-      projectId: "recyc-eat",
-      storageBucket: "recyc-eat.firebasestorage.app",
-      messagingSenderId: "45738414086",
-      appId: "1:45738414086:web:90b0f800476683c77d3387"
-    };
+    // ── Where to land after signing in ───────────────────────────
+    // The guard on the admin pages passes ?next=, but only these pages are
+    // allowed so the parameter can't be used to bounce staff off-site.
+    const ADMIN_PAGES = [
+      "dashboard.html",
+      "items-collected.html",
+      "redemption-history.html",
+      "food-inventory.html",
+      "participation-trends.html",
+      "kiosk-settings.html",
+    ];
 
-    const app  = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
+    const requested = new URLSearchParams(location.search).get("next");
+    const landing   = ADMIN_PAGES.includes(requested) ? requested : "dashboard.html";
 
-    // ── If already logged in, skip to dashboard ──────────────────
+    await authReady;
+
+    // ── If this session is already signed in, skip the form ──────
     onAuthStateChanged(auth, (user) => {
       if (user) {
-        window.location.href = "dashboard.html";
+        window.location.replace(landing);
       }
     });
 
@@ -190,7 +195,7 @@
 
       try {
         await signInWithEmailAndPassword(auth, emailVal, passVal);
-        // onAuthStateChanged above will redirect to dashboard
+        // onAuthStateChanged above handles the redirect
       } catch (err) {
         showError(friendlyError(err.code));
         loginBtn.disabled = false;

@@ -8,8 +8,9 @@
   <link rel="stylesheet" href="../css/items-collected.css" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js" defer></script>
   <script src="../js/admin-shared.js" defer></script>
+  <script src="../js/admin-auth.js" type="module"></script>
 </head>
-<body>
+<body class="auth-pending">
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="admin-app">
     <aside class="admin-sidebar" id="adminSidebar">
@@ -44,6 +45,10 @@
             <span class="admin-avatar__mark">AD</span>
             <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
           </div>
+          <button class="btn btn-ghost btn-sm" type="button" id="signOutBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -62,13 +67,14 @@
         </div>
 
         <div class="toolbar">
+          <!-- both dates and the type list are filled from Firestore on load -->
           <div class="field">
             <label for="fromDate">From</label>
-            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+            <input class="input" type="date" id="fromDate" />
           </div>
           <div class="field">
             <label for="toDate">To</label>
-            <input class="input" type="date" id="toDate" value="2026-09-07" />
+            <input class="input" type="date" id="toDate" />
           </div>
           <div class="field">
             <label for="period">Totals view</label>
@@ -76,15 +82,6 @@
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
-            </select>
-          </div>
-          <div class="field">
-            <label for="typeFilter">Item type</label>
-            <select class="select" id="typeFilter">
-              <option value="all">All types</option>
-              <option value="Plastic bottle">Plastic bottle</option>
-              <option value="Big bottle">Big bottle</option>
-              <option value="Aluminum can">Aluminum can</option>
             </select>
           </div>
           <button class="btn btn-primary" type="button" id="applyFilters">Apply filters</button>
@@ -124,7 +121,20 @@
         </section>
 
         <section class="card items-history">
-          <div class="card-header"><h2>Collection history</h2></div>
+          <div class="card-header">
+            <h2>Collection history</h2>
+            <!-- narrows the rows below only; the totals and charts keep
+                 describing the whole date range -->
+            <div class="history-tools">
+              <span class="history-count" id="historyCount">0 rows</span>
+              <label class="history-filter" for="typeFilter">
+                Item type
+                <select class="select" id="typeFilter">
+                  <option value="all">All types</option>
+                </select>
+              </label>
+            </div>
+          </div>
           <div id="tableState"></div>
           <div class="table-wrap">
             <table class="table" id="historyTable">
@@ -146,77 +156,74 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { loadCollections } from "../js/items-collected-data.js";
+    import { localDateKey, keyToLocalDate, dayKeysBetween, weekStartKey } from "../js/date-utils.js";
+
     let collectionChart, typeChart;
+    let allRows = [];     // every collection row from Firestore, sorted oldest first
+    let rangeRows = [];   // allRows narrowed to the chosen date range
 
-    function inRange(iso, from, to) {
-      const d = iso.slice(0, 10);
-      return d >= from && d <= to;
-    }
+    // Buckets are keyed by local date so the label always matches the data
+    // underneath it. Daily view fills empty days so the line shows real gaps.
+    function groupTotals(rows, period, from, to) {
+      const totals = new Map();
 
-    function groupTotals(rows, period) {
-      const map = new Map();
+      if (period === "daily") {
+        dayKeysBetween(from, to).forEach((key) => totals.set(key, 0));
+      }
+
       rows.forEach((row) => {
-        const d = new Date(row.date);
         let key;
-        if (period === "monthly") {
-          key = d.toLocaleString("en-PH", { month: "short", year: "numeric" });
-        } else if (period === "weekly") {
-          const start = new Date(d);
-          start.setDate(d.getDate() - ((d.getDay() + 6) % 7));
-          key = "Week of " + start.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-        } else {
-          key = d.toLocaleDateString("en-PH", { month: "short", day: "numeric" });
-        }
-        map.set(key, (map.get(key) || 0) + row.qty);
+        if (period === "monthly")     key = row.dateKey.slice(0, 7);
+        else if (period === "weekly") key = weekStartKey(row.dateKey);
+        else                          key = row.dateKey;
+
+        totals.set(key, (totals.get(key) || 0) + row.qty);
       });
-      return { labels: [...map.keys()], values: [...map.values()] };
+
+      const keys = [...totals.keys()].sort();
+      const labels = keys.map((key) => {
+        if (period === "monthly") {
+          return keyToLocalDate(`${key}-01`).toLocaleDateString("en-PH", { month: "short", year: "numeric" });
+        }
+        const label = keyToLocalDate(key).toLocaleDateString("en-PH", { month: "short", day: "numeric" });
+        return period === "weekly" ? `Week of ${label}` : label;
+      });
+
+      return { labels, values: keys.map((key) => totals.get(key)) };
     }
 
     function render() {
       const from = document.getElementById("fromDate").value;
       const to = document.getElementById("toDate").value;
       const period = document.getElementById("period").value;
-      const type = document.getElementById("typeFilter").value;
 
-      let rows = AdminData.collections.filter((c) => inRange(c.date, from, to));
-      if (type !== "all") rows = rows.filter((c) => c.type === type);
+      // everything above the table describes the full range, whatever the
+      // history card's type filter is set to
+      const rows = allRows.filter((c) => c.dateKey >= from && c.dateKey <= to);
 
       const totalQty = rows.reduce((s, r) => s + r.qty, 0);
       const totalPts = rows.reduce((s, r) => s + r.points, 0);
-      const days = Math.max(1, Math.round((new Date(to) - new Date(from)) / 86400000) + 1);
+      const days = Math.max(1, Math.round((keyToLocalDate(to) - keyToLocalDate(from)) / 86400000) + 1);
 
       document.getElementById("rangeTotal").textContent = AdminUI.formatNumber(totalQty);
-      document.getElementById("rangeSessions").textContent = `${rows.length} sessions`;
+      const sessionCount = new Set(rows.map((r) => r.sessionId)).size;
+      document.getElementById("rangeSessions").textContent =
+        `${AdminUI.formatNumber(sessionCount)} session${sessionCount === 1 ? "" : "s"}`;
       document.getElementById("rangePoints").textContent = AdminUI.formatNumber(totalPts);
       document.getElementById("rangeAvg").textContent = AdminUI.formatNumber(Math.round(totalQty / days));
 
       const titles = { daily: "Daily collection totals", weekly: "Weekly collection totals", monthly: "Monthly collection totals" };
       document.getElementById("chartTitle").textContent = titles[period];
 
-      const grouped = groupTotals(rows, period);
+      const grouped = groupTotals(rows, period, from, to);
       const typeMap = {};
       rows.forEach((r) => { typeMap[r.type] = (typeMap[r.type] || 0) + r.qty; });
 
-      const body = document.getElementById("historyBody");
-      const state = document.getElementById("tableState");
-      if (!rows.length) {
-        body.innerHTML = "";
-        state.innerHTML = `<div class="state-box"><strong>No collections found</strong><p>Try widening the date range or clearing the type filter.</p></div>`;
-        document.getElementById("historyTable").style.display = "none";
-      } else {
-        state.innerHTML = "";
-        document.getElementById("historyTable").style.display = "";
-        body.innerHTML = rows.slice().reverse().map((r) => `
-          <tr>
-            <td>${r.id}</td>
-            <td>${AdminUI.formatDateTime(r.date)}</td>
-            <td>${AdminUI.escapeHtml(r.type)}</td>
-            <td class="num">${r.qty}</td>
-            <td class="num">${r.points}</td>
-            <td>${AdminUI.escapeHtml(r.receiptId)}</td>
-          </tr>`).join("");
-      }
+      rangeRows = rows;
+      fillTypeFilter(rows);
+      renderHistory();
 
       if (collectionChart) collectionChart.destroy();
       collectionChart = new Chart(document.getElementById("collectionChart"), {
@@ -248,7 +255,7 @@
           labels: Object.keys(typeMap),
           datasets: [{
             data: Object.values(typeMap),
-            backgroundColor: ["#1fa28f", "#2fa04e", "#167f77"],
+            backgroundColor: ["#1fa28f", "#2fa04e", "#167f77", "#83ded5", "#0e7c78", "#7acb74"],
           }],
         },
         options: {
@@ -259,8 +266,105 @@
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    // Only the types present in the current range are worth offering, and the
+    // list comes from what the kiosk actually recorded so it can never drift
+    // out of sync with the labels in the database.
+    function fillTypeFilter(rows) {
+      const select = document.getElementById("typeFilter");
+      const types = [...new Set(rows.map((r) => r.type))].sort();
+      const previous = select.value;
+
+      select.innerHTML =
+        `<option value="all">All types</option>` +
+        types.map((t) => `<option value="${AdminUI.escapeHtml(t)}">${AdminUI.escapeHtml(t)}</option>`).join("");
+
+      // keep the admin's choice across a date change unless it vanished
+      select.value = types.includes(previous) ? previous : "all";
+    }
+
+    function renderHistory() {
+      const type  = document.getElementById("typeFilter").value;
+      const rows  = type === "all" ? rangeRows : rangeRows.filter((r) => r.type === type);
+      const body  = document.getElementById("historyBody");
+      const state = document.getElementById("tableState");
+      const table = document.getElementById("historyTable");
+
+      const qty = rows.reduce((s, r) => s + r.qty, 0);
+      document.getElementById("historyCount").textContent =
+        `${AdminUI.formatNumber(rows.length)} row${rows.length === 1 ? "" : "s"} · ${AdminUI.formatNumber(qty)} items`;
+
+      if (!rows.length) {
+        body.innerHTML = "";
+        table.style.display = "none";
+        // say which filter came up empty so the fix is obvious
+        state.innerHTML = type === "all"
+          ? `<div class="state-box"><strong>No collections found</strong><p>Try widening the date range.</p></div>`
+          : `<div class="state-box"><strong>No ${AdminUI.escapeHtml(type)} collected</strong><p>Nothing of this type in the selected range — switch back to all types.</p></div>`;
+        return;
+      }
+
+      state.innerHTML = "";
+      table.style.display = "";
+      body.innerHTML = rows.slice().reverse().map((r) => `
+        <tr>
+          <td>${r.id}</td>
+          <td>${AdminUI.formatDateTime(r.date)}</td>
+          <td>${AdminUI.escapeHtml(r.type)}</td>
+          <td class="num">${r.qty}</td>
+          <td class="num">${r.points}</td>
+          <td>${AdminUI.escapeHtml(r.receiptId)}</td>
+        </tr>`).join("");
+    }
+
+    // Default to the last 7 days, but if nothing was collected then, open on
+    // the full history instead of an empty page.
+    function setDefaultRange(rows) {
+      const fromEl = document.getElementById("fromDate");
+      const toEl   = document.getElementById("toDate");
+
+      const today = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 6);
+
+      let from = localDateKey(weekAgo);
+      let to   = localDateKey(today);
+
+      if (rows.length) {
+        const earliest = rows[0].dateKey;
+        const latest   = rows[rows.length - 1].dateKey;
+        const hasRecent = rows.some((r) => r.dateKey >= from && r.dateKey <= to);
+        if (!hasRecent) {
+          from = earliest;
+          to   = latest;
+        }
+      }
+
+      fromEl.value = from;
+      toEl.value   = to;
+    }
+
+    function showLoadError() {
+      document.getElementById("historyTable").style.display = "none";
+      document.getElementById("historyCount").textContent = "—";
+      document.getElementById("tableState").innerHTML =
+        `<div class="state-box"><strong>Couldn't load collections</strong><p>Check your connection and refresh the page.</p></div>`;
+      AdminUI.toast("Couldn't load collections", "Check your connection and try again.", "error");
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("applyFilters").addEventListener("click", render);
+      // the table filter is cheap, so it applies as soon as it changes
+      document.getElementById("typeFilter").addEventListener("change", renderHistory);
+
+      try {
+        allRows = await loadCollections();
+      } catch (err) {
+        console.error("Failed to load collections:", err);
+        showLoadError();
+        return;
+      }
+
+      setDefaultRange(allRows);
       render();
     });
   </script>

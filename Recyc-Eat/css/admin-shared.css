@@ -58,6 +58,14 @@ html, body {
 a { color: var(--teal-700); }
 img { max-width: 100%; }
 
+/* Admin pages ship hidden and are revealed by admin-auth.js once Firebase
+   confirms a signed-in user. It fails closed on purpose: if that script never
+   runs, the page stays blank instead of exposing kiosk data. */
+body.auth-pending .admin-app,
+body.auth-pending .sidebar-overlay {
+  visibility: hidden;
+}
+
 /* ===== APP SHELL =========================================== */
 .admin-app {
   display: flex;

@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="../css/admin-shared.css" />
   <link rel="stylesheet" href="../css/redemption-history.css" />
   <script src="../js/admin-shared.js" defer></script>
+  <script src="../js/admin-auth.js" type="module"></script>
 </head>
-<body>
+<body class="auth-pending">
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="admin-app">
     <aside class="admin-sidebar" id="adminSidebar">
@@ -43,6 +44,10 @@
             <span class="admin-avatar__mark">AD</span>
             <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
           </div>
+          <button class="btn btn-ghost btn-sm" type="button" id="signOutBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -56,7 +61,7 @@
         <div class="page-header">
           <div>
             <h1>Redemption History</h1>
-            <p>Search and filter reward redemptions by receipt ID, date, and status.</p>
+            <p>Search and filter reward redemptions by receipt ID, date, and reward.</p>
           </div>
         </div>
 
@@ -65,20 +70,19 @@
             <label for="search">Search</label>
             <input class="input" type="search" id="search" placeholder="Receipt ID, item, or redemption ID" />
           </div>
+          <!-- the dates and the reward list are filled from Firestore on load -->
           <div class="field">
             <label for="fromDate">From</label>
-            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+            <input class="input" type="date" id="fromDate" />
           </div>
           <div class="field">
             <label for="toDate">To</label>
-            <input class="input" type="date" id="toDate" value="2026-09-07" />
+            <input class="input" type="date" id="toDate" />
           </div>
           <div class="field">
-            <label for="statusFilter">Status</label>
-            <select class="select" id="statusFilter">
-              <option value="all">All statuses</option>
-              <option value="completed">Completed</option>
-              <option value="pending">Pending</option>
+            <label for="rewardFilter">Reward</label>
+            <select class="select" id="rewardFilter">
+              <option value="all">All rewards</option>
             </select>
           </div>
           <button class="btn btn-primary" type="button" id="applyFilters">Apply</button>
@@ -106,7 +110,8 @@
             <table class="table redemptions-table">
               <thead>
                 <tr>
-                  <th>ID</th>
+                  <!-- a redemption is stored under its voucher id, so a separate
+                       ID column would just repeat Receipt ID -->
                   <th>Receipt ID</th>
                   <th>Item redeemed</th>
                   <th>Points used</th>
@@ -126,9 +131,13 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { loadRedemptions } from "../js/redemption-history-data.js";
+    import { localDateKey } from "../js/date-utils.js";
+
     const PAGE_SIZE = 5;
     let page = 1;
+    let allRows = [];   // every redemption from Firestore, newest first
     let filtered = [];
 
     const badgeMap = {
@@ -140,18 +149,15 @@
       const q = document.getElementById("search").value.trim().toLowerCase();
       const from = document.getElementById("fromDate").value;
       const to = document.getElementById("toDate").value;
-      const status = document.getElementById("statusFilter").value;
+      const reward = document.getElementById("rewardFilter").value;
 
-      return AdminData.redemptions
-        .filter((r) => {
-          const day = r.date.slice(0, 10);
-          if (day < from || day > to) return false;
-          if (status !== "all" && r.status !== status) return false;
-          if (!q) return true;
-          return [r.id, r.receiptId, r.item, r.status].join(" ").toLowerCase().includes(q);
-        })
-        .slice()
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+      // allRows already arrives sorted newest first
+      return allRows.filter((r) => {
+        if (r.dateKey < from || r.dateKey > to) return false;
+        if (reward !== "all" && r.rewardType !== reward) return false;
+        if (!q) return true;
+        return [r.id, r.receiptId, r.item, r.status].join(" ").toLowerCase().includes(q);
+      });
     }
 
     function renderPage() {
@@ -167,7 +173,8 @@
       tableWrap.hidden = filtered.length === 0;
       foot.hidden = filtered.length === 0;
 
-      document.getElementById("resultCount").textContent = `${filtered.length} results`;
+      document.getElementById("resultCount").textContent =
+        `${AdminUI.formatNumber(filtered.length)} result${filtered.length === 1 ? "" : "s"}`;
 
       const pages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
       if (page > pages) page = pages;
@@ -176,7 +183,6 @@
 
       document.getElementById("tableBody").innerHTML = slice.map((r) => `
         <tr>
-          <td>${r.id}</td>
           <td>${AdminUI.escapeHtml(r.receiptId)}</td>
           <td>${AdminUI.escapeHtml(r.item)}</td>
           <td class="num">${r.points}</td>
@@ -219,13 +225,79 @@
       renderPage();
     }
 
+    /* ── loading / failure states ─────────────────────────────── */
+    function setBusy(which) {
+      document.getElementById("loadingState").hidden = which !== "loading";
+      document.getElementById("errorState").hidden   = which !== "error";
+      document.getElementById("emptyState").hidden   = true;
+      document.getElementById("tableWrap").hidden    = true;
+      document.querySelector(".table-foot").hidden   = true;
+      document.getElementById("resultCount").textContent =
+        which === "error" ? "—" : "Loading…";
+    }
+
+    // Only the rewards actually dispensed are worth offering as a filter.
+    function fillRewardFilter(rows) {
+      const select = document.getElementById("rewardFilter");
+      const seen = new Map();   // reward_type -> readable label
+      rows.forEach((r) => { if (r.rewardType) seen.set(r.rewardType, r.item); });
+
+      const previous = select.value;
+      select.innerHTML =
+        `<option value="all">All rewards</option>` +
+        [...seen.entries()]
+          .sort((a, b) => a[1].localeCompare(b[1]))
+          .map(([value, label]) =>
+            `<option value="${AdminUI.escapeHtml(value)}">${AdminUI.escapeHtml(label)}</option>`)
+          .join("");
+
+      select.value = seen.has(previous) ? previous : "all";
+    }
+
+    // Default to the last 7 days, falling back to the full history so the
+    // page never opens empty just because nothing was redeemed this week.
+    function setDefaultRange(rows) {
+      const today = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 6);
+
+      let from = localDateKey(weekAgo);
+      let to   = localDateKey(today);
+
+      if (rows.length && !rows.some((r) => r.dateKey >= from && r.dateKey <= to)) {
+        from = rows[rows.length - 1].dateKey;   // rows are newest first
+        to   = rows[0].dateKey;
+      }
+
+      document.getElementById("fromDate").value = from;
+      document.getElementById("toDate").value   = to;
+    }
+
+    async function load() {
+      setBusy("loading");
+      try {
+        allRows = await loadRedemptions();
+      } catch (err) {
+        console.error("Failed to load redemptions:", err);
+        setBusy("error");
+        AdminUI.toast("Couldn't load redemptions", "Check your connection and try again.", "error");
+        return;
+      }
+
+      fillRewardFilter(allRows);
+      setDefaultRange(allRows);
+      apply();
+    }
+
     document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("applyFilters").addEventListener("click", apply);
+      document.getElementById("rewardFilter").addEventListener("change", apply);
       document.getElementById("search").addEventListener("keydown", (e) => {
         if (e.key === "Enter") apply();
       });
-      document.getElementById("retryBtn").addEventListener("click", apply);
-      apply();
+      // retry re-fetches rather than re-filtering stale data
+      document.getElementById("retryBtn").addEventListener("click", load);
+      load();
     });
   </script>
 </body>

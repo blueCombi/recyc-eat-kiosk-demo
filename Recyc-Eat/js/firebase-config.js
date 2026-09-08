@@ -1,6 +1,7 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAQZstw1qOUltsN_HKPZE7qNI2uRRWpwU",
@@ -13,6 +14,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
+
+// The kiosk laptop is shared, so a sign-in lasts for the browser session only:
+// close the browser and the next person has to log in again. Every page must
+// wait on this before reading auth state, otherwise the first
+// onAuthStateChanged can report "signed out" before the stored session loads.
+const authReady = setPersistence(auth, browserSessionPersistence)
+  .catch((err) => console.error("Could not set auth persistence:", err));
 
 // ─── Points config ───────────────────────────────────────────────
 export const POINTS = {
@@ -114,4 +123,4 @@ export async function redeemReward(voucherID, rewardType) {
   return { success: true };
 }
 
-export { db };  
+export { db, auth, authReady };  

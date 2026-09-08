@@ -1,6 +1,7 @@
 // dashboard-data.js
 // Pulls real data from Firestore for the Dashboard Overview page.
 import { db } from "./firebase-config.js";
+import { localDateKey } from "./date-utils.js";
 import {
   collection,
   getDocs,
@@ -26,15 +27,6 @@ function summarizeItems(items) {
   return items
     .map((it) => `${it?.qty ?? it?.quantity ?? 1} × ${it?.label || it?.name || it?.type || "item"}`)
     .join(", ");
-}
-
-// Day keys must be built in kiosk-local time. toISOString() is UTC, which
-// pushed anything recycled after local midnight onto the previous day and
-// left the keys a day off the labels every morning until 8am in Manila.
-function localDateKey(date) {
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day   = String(date.getDate()).padStart(2, "0");
-  return `${date.getFullYear()}-${month}-${day}`;
 }
 
 function toDateKey(iso) {
