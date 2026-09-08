@@ -68,8 +68,16 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { POINTS } from '../js/firebase-config.js';
+    import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
+
+    try {
+      applySettingsToPoints(POINTS, await loadKioskSettings());
+    } catch (err) {
+      console.error("Using default point values:", err);
+    }
 
     // Stopping here shouldn't throw away points already earned, so this
     // button follows the same routing as FINISH on itemaccepted.html.

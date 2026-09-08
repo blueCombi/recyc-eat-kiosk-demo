@@ -68,19 +68,25 @@
 
   <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span>Tap the ring for each item you insert. Reach 50 points for a free meal.</span>
+    <span id="kioskHint">Tap the ring for each item you insert. Reach 50 points for a free meal.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { POINTS, createVoucher, addPoints, scanVoucher } from '../js/firebase-config.js';
+    import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
 
-    // ── item cycle: small bottle → big bottle → aluminum can (double tap rejects)
-    const ITEM_TYPES = [
-      { key: "small_bottle", label: "Small Plastic Bottle", pts: POINTS.small_bottle, img: "../images/bottle.png",  alt: "Small plastic bottle" },
-      { key: "big_bottle",   label: "Big Plastic Bottle",   pts: POINTS.big_bottle,   img: "../images/bottle.png",  alt: "Big plastic bottle"   },
-      { key: "aluminum_can", label: "Aluminum Can",          pts: POINTS.aluminum_can, img: "../images/can.png",     alt: "Aluminum can"         },
-    ];
+    function itemCatalog() {
+      return [
+        { key: "small_bottle", label: "Small Plastic Bottle", pts: POINTS.small_bottle, img: "../images/bottle.png",  alt: "Small plastic bottle" },
+        { key: "big_bottle",   label: "Big Plastic Bottle",   pts: POINTS.big_bottle,   img: "../images/bottle.png",  alt: "Big plastic bottle"   },
+        { key: "aluminum_can", label: "Aluminum Can",          pts: POINTS.aluminum_can, img: "../images/can.png",     alt: "Aluminum can"         },
+      ];
+    }
+
+    // rebuilt after live settings load so admin point values actually apply
+    let ITEM_TYPES = itemCatalog();
 
     let itemIndex    = 0;
     let totalPoints  = 0;
@@ -131,6 +137,15 @@
 
     // ── load initial state ────────────────────────────────────────
     async function init() {
+      try {
+        applySettingsToPoints(POINTS, await loadKioskSettings());
+      } catch (err) {
+        console.error("Using default point values:", err);
+      }
+      ITEM_TYPES = itemCatalog();
+      document.getElementById("kioskHint").textContent =
+        `Tap the ring for each item you insert. Reach ${POINTS.threshold} points for a free meal.`;
+
       // if returning user scanned a QR, load from Firebase
       const returnID = sessionStorage.getItem("returnVoucherID");
       if (returnID) {

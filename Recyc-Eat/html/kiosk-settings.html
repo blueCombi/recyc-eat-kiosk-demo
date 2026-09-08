@@ -142,7 +142,7 @@
               <div class="setting-row">
                 <div class="setting-copy">
                   <h3>Canned meal</h3>
-                  <p>Points required to redeem a standard canned meal.</p>
+                  <p>Points required to redeem a canned meal. The kiosk uses this same number as the unlock threshold.</p>
                 </div>
                 <div class="setting-control">
                   <input class="input" type="number" min="1" id="rewardMealPoints" required />
@@ -155,6 +155,7 @@
                 </div>
                 <div class="setting-control">
                   <input class="input" type="number" min="1" id="rewardSnackPoints" required />
+                  <div class="hint">Saved, but the kiosk currently dispenses canned food only.</div>
                 </div>
               </div>
               <div class="setting-row">
@@ -163,11 +164,9 @@
                   <p>Reward items currently offered at this kiosk (one per line).</p>
                 </div>
                 <div class="setting-control">
-                  <textarea class="textarea" id="availableRewards" rows="4">Canned Meal A
-Canned Meal B
-Canned Meal C
-Snack Pack
-Fruit Cup</textarea>
+                  <textarea class="textarea" id="availableRewards" rows="4">Tuna
+Sardines</textarea>
+                  <div class="hint">One reward per line. The kiosk dispenses canned food from this list.</div>
                 </div>
               </div>
             </div>
@@ -198,6 +197,7 @@ Fruit Cup</textarea>
                     <input type="checkbox" id="autoPrint" />
                     <span></span>
                   </label>
+                  <div class="hint">Stored for when a printer is attached.</div>
                 </div>
               </div>
               <div class="setting-row">
@@ -230,7 +230,14 @@ Fruit Cup</textarea>
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import {
+      DEFAULT_SETTINGS,
+      validateSettings,
+      loadKioskSettings,
+      saveKioskSettings,
+    } from "../js/kiosk-settings-data.js";
+
     const fields = [
       "pointsSmallBottle",
       "pointsBigBottle",
@@ -253,9 +260,7 @@ Fruit Cup</textarea>
       toggles.forEach((id) => {
         document.getElementById(id).checked = Boolean(data[id]);
       });
-      if (data.availableRewards) {
-        document.getElementById("availableRewards").value = data.availableRewards;
-      }
+      document.getElementById("availableRewards").value = data.availableRewards;
     }
 
     function readForm() {
@@ -270,33 +275,43 @@ Fruit Cup</textarea>
       return data;
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const current = AdminData.getSettings();
-      if (!current.availableRewards) {
-        current.availableRewards = document.getElementById("availableRewards").value.trim();
-      }
-      fillForm(current);
+    const saveBtn  = document.querySelector('#settingsForm button[type="submit"]');
+    const resetBtn = document.getElementById("resetBtn");
 
-      document.getElementById("settingsForm").addEventListener("submit", (e) => {
+    document.addEventListener("DOMContentLoaded", async () => {
+      try {
+        fillForm(await loadKioskSettings());
+      } catch (err) {
+        console.error("Failed to load settings:", err);
+        fillForm(DEFAULT_SETTINGS);
+        AdminUI.toast("Couldn't load saved settings", "Showing defaults. Check your connection.", "error");
+      }
+
+      document.getElementById("settingsForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const data = readForm();
-        if (data.minRedemption > data.maxRedemption) {
-          AdminUI.toast("Invalid limits", "Minimum redemption cannot exceed maximum.", "error");
+        const problem = validateSettings(data);
+        if (problem) {
+          AdminUI.toast("Check the values", problem, "error");
           return;
         }
-        AdminData.saveSettings(data);
-        AdminUI.toast("Settings saved", "Kiosk configuration updated successfully.");
+
+        saveBtn.disabled = true;
+        try {
+          await saveKioskSettings(data);
+        } catch (err) {
+          console.error("Failed to save settings:", err);
+          AdminUI.toast("Couldn't save settings", err.message || "Try again.", "error");
+          saveBtn.disabled = false;
+          return;
+        }
+        saveBtn.disabled = false;
+        AdminUI.toast("Settings saved", "The kiosk will use these values on the next screen.");
       });
 
-      document.getElementById("resetBtn").addEventListener("click", () => {
-        localStorage.removeItem("econova_admin_settings");
-        fillForm(AdminData.getSettings());
-        document.getElementById("availableRewards").value = `Canned Meal A
-Canned Meal B
-Canned Meal C
-Snack Pack
-Fruit Cup`;
-        AdminUI.toast("Defaults restored", "Review values, then click Save Changes.");
+      resetBtn.addEventListener("click", () => {
+        fillForm(DEFAULT_SETTINGS);
+        AdminUI.toast("Defaults restored", "Review the values, then click Save Changes to apply them.");
       });
     });
   </script>

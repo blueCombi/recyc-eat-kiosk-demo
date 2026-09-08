@@ -81,23 +81,29 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script>
-    (function () {
-      var REWARD_POINTS = 50;
-      // read from sessionStorage (set by itemaccepted.html)
-      var total  = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
-      if (isNaN(total) || total < 0) total = 0;
-      var needed = Math.max(0, REWARD_POINTS - total);
+  <script type="module" src="../js/kiosk-guard.js"></script>
+  <script type="module">
+    import { POINTS } from "../js/firebase-config.js";
+    import { loadKioskSettings, applySettingsToPoints } from "../js/kiosk-settings-data.js";
 
-      document.getElementById("totalPoints").textContent  = total;
-      document.getElementById("rewardNeed").textContent   = REWARD_POINTS;
-      document.getElementById("pointsNeeded").textContent = needed;
-      document.getElementById("scoreRing").setAttribute("aria-label", "Current total points " + total);
+    try {
+      applySettingsToPoints(POINTS, await loadKioskSettings());
+    } catch (err) {
+      console.error("Using default point values:", err);
+    }
 
-      // fill the goal bar with how far along they are
-      var pct = Math.min(100, Math.round((total / REWARD_POINTS) * 100));
-      document.getElementById("goalFill").style.width = pct + "%";
-    })();
+    const REWARD_POINTS = POINTS.threshold;
+    const total = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+    const safeTotal = Number.isNaN(total) || total < 0 ? 0 : total;
+    const needed = Math.max(0, REWARD_POINTS - safeTotal);
+
+    document.getElementById("totalPoints").textContent  = safeTotal;
+    document.getElementById("rewardNeed").textContent   = REWARD_POINTS;
+    document.getElementById("pointsNeeded").textContent = needed;
+    document.getElementById("scoreRing").setAttribute("aria-label", "Current total points " + safeTotal);
+
+    const pct = Math.min(100, Math.round((safeTotal / REWARD_POINTS) * 100));
+    document.getElementById("goalFill").style.width = pct + "%";
   </script>
 </body>
 </html>

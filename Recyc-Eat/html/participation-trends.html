@@ -62,18 +62,18 @@
         <div class="page-header">
           <div>
             <h1>Participation Trends</h1>
-            <p>Active users, new sign-ups, collections, and redemptions over time.</p>
+            <p>Who used the kiosk, new QR receipts, collections, and redemptions over time.</p>
           </div>
         </div>
 
         <div class="toolbar">
           <div class="field">
             <label for="fromDate">From</label>
-            <input class="input" type="date" id="fromDate" value="2026-09-01" />
+            <input class="input" type="date" id="fromDate" />
           </div>
           <div class="field">
             <label for="toDate">To</label>
-            <input class="input" type="date" id="toDate" value="2026-09-07" />
+            <input class="input" type="date" id="toDate" />
           </div>
           <div class="field">
             <label for="grain">Trend grain</label>
@@ -90,12 +90,12 @@
           <article class="card stat-card">
             <div class="stat-card__label">Active participants</div>
             <div class="stat-card__value" id="statActive">0</div>
-            <span class="stat-card__trend trend-up">↑ Growing</span>
+            <span class="stat-card__trend trend-flat" id="activeTrend">Used the kiosk</span>
           </article>
           <article class="card stat-card">
             <div class="stat-card__label">New this period</div>
             <div class="stat-card__value" id="statNew">0</div>
-            <span class="stat-card__trend trend-up">Joined recently</span>
+            <span class="stat-card__trend trend-flat">New QR receipts</span>
           </article>
           <article class="card stat-card">
             <div class="stat-card__label">Items collected</div>
@@ -105,7 +105,7 @@
           <article class="card stat-card">
             <div class="stat-card__label">Redemptions</div>
             <div class="stat-card__value" id="statRedeems">0</div>
-            <span class="stat-card__trend trend-flat">Completed + pending</span>
+            <span class="stat-card__trend trend-flat">In selected range</span>
           </article>
         </section>
 
@@ -126,8 +126,9 @@
 
         <section class="card">
           <div class="card-header"><h2>Trend summary</h2></div>
+          <div id="tableState"></div>
           <div class="table-wrap">
-            <table class="table trends-summary-table">
+            <table class="table trends-summary-table" id="summaryTable">
               <thead>
                 <tr>
                   <th>Period</th>
@@ -145,59 +146,95 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { loadParticipation, buildTrendSeries } from "../js/participation-trends-data.js";
+    import { localDateKey } from "../js/date-utils.js";
+
     let participantsChart, activityChart;
+    let data = { newVouchers: [], collections: [], redemptions: [] };
 
-    function buildSeries(grain) {
-      const base = AdminData.dailySeries;
-      if (grain === "daily") {
-        return {
-          labels: base.labels,
-          active: base.activeParticipants,
-          neu: base.newParticipants,
-          items: base.items,
-          redeems: base.redemptions,
-        };
+    function allDateKeys() {
+      return [
+        ...data.newVouchers.map((r) => r.dateKey),
+        ...data.collections.map((r) => r.dateKey),
+        ...data.redemptions.map((r) => r.dateKey),
+      ].sort();
+    }
+
+    // Default to the last 7 days, falling back to full history if that week is empty.
+    function setDefaultRange() {
+      const today = new Date();
+      const weekAgo = new Date();
+      weekAgo.setDate(today.getDate() - 6);
+
+      let from = localDateKey(weekAgo);
+      let to   = localDateKey(today);
+      const keys = allDateKeys();
+
+      if (keys.length && !keys.some((k) => k >= from && k <= to)) {
+        from = keys[0];
+        to   = keys[keys.length - 1];
       }
 
-      if (grain === "weekly") {
-        const mid = Math.ceil(base.labels.length / 2);
-        const sum = (arr, a, b) => arr.slice(a, b).reduce((s, n) => s + n, 0);
-        return {
-          labels: ["Week 1", "Week 2"],
-          active: [base.activeParticipants[mid - 1], base.activeParticipants.at(-1)],
-          neu: [sum(base.newParticipants, 0, mid), sum(base.newParticipants, mid)],
-          items: [sum(base.items, 0, mid), sum(base.items, mid)],
-          redeems: [sum(base.redemptions, 0, mid), sum(base.redemptions, mid)],
-        };
+      document.getElementById("fromDate").value = from;
+      document.getElementById("toDate").value   = to;
+    }
+
+    function describeActiveTrend(series) {
+      const trend = document.getElementById("activeTrend");
+      if (series.stats.active === 0) {
+        trend.textContent = "No kiosk visits";
+        trend.className = "stat-card__trend trend-flat";
+        return;
       }
 
-      return {
-        labels: ["Sep 2026"],
-        active: [base.activeParticipants.at(-1)],
-        neu: [base.newParticipants.reduce((s, n) => s + n, 0)],
-        items: [base.items.reduce((s, n) => s + n, 0)],
-        redeems: [base.redemptions.reduce((s, n) => s + n, 0)],
-      };
+      const first = series.active[0] || 0;
+      const last  = series.active.at(-1) || 0;
+      if (last > first) {
+        trend.textContent = "↑ Growing toward the end";
+        trend.className = "stat-card__trend trend-up";
+      } else if (last < first) {
+        trend.textContent = "↓ Quieter toward the end";
+        trend.className = "stat-card__trend trend-down";
+      } else {
+        trend.textContent = "Used the kiosk";
+        trend.className = "stat-card__trend trend-flat";
+      }
     }
 
     function render() {
+      const from  = document.getElementById("fromDate").value;
+      const to    = document.getElementById("toDate").value;
       const grain = document.getElementById("grain").value;
-      const series = buildSeries(grain);
+      const series = buildTrendSeries(data, from, to, grain);
 
-      document.getElementById("statActive").textContent = AdminUI.formatNumber(series.active.at(-1) || 0);
-      document.getElementById("statNew").textContent = AdminUI.formatNumber(series.neu.reduce((s, n) => s + n, 0));
-      document.getElementById("statItems").textContent = AdminUI.formatNumber(series.items.reduce((s, n) => s + n, 0));
-      document.getElementById("statRedeems").textContent = AdminUI.formatNumber(series.redeems.reduce((s, n) => s + n, 0));
+      document.getElementById("statActive").textContent  = AdminUI.formatNumber(series.stats.active);
+      document.getElementById("statNew").textContent     = AdminUI.formatNumber(series.stats.neu);
+      document.getElementById("statItems").textContent   = AdminUI.formatNumber(series.stats.items);
+      document.getElementById("statRedeems").textContent = AdminUI.formatNumber(series.stats.redeems);
+      describeActiveTrend(series);
 
-      document.getElementById("summaryBody").innerHTML = series.labels.map((label, i) => `
-        <tr>
-          <td>${label}</td>
-          <td class="num">${series.active[i]}</td>
-          <td class="num">${series.neu[i]}</td>
-          <td class="num">${series.items[i]}</td>
-          <td class="num">${series.redeems[i]}</td>
-        </tr>`).join("");
+      const body  = document.getElementById("summaryBody");
+      const state = document.getElementById("tableState");
+      const table = document.getElementById("summaryTable");
+      const hasActivity = series.stats.active || series.stats.neu || series.stats.items || series.stats.redeems;
+
+      if (!hasActivity) {
+        body.innerHTML = "";
+        table.style.display = "none";
+        state.innerHTML = `<div class="state-box"><strong>No activity in this range</strong><p>Try widening the dates.</p></div>`;
+      } else {
+        state.innerHTML = "";
+        table.style.display = "";
+        body.innerHTML = series.labels.map((label, i) => `
+          <tr>
+            <td>${label}</td>
+            <td class="num">${AdminUI.formatNumber(series.active[i])}</td>
+            <td class="num">${AdminUI.formatNumber(series.neu[i])}</td>
+            <td class="num">${AdminUI.formatNumber(series.items[i])}</td>
+            <td class="num">${AdminUI.formatNumber(series.redeems[i])}</td>
+          </tr>`).join("");
+      }
 
       if (participantsChart) participantsChart.destroy();
       participantsChart = new Chart(document.getElementById("participantsChart"), {
@@ -259,8 +296,25 @@
       });
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
+    function showLoadError() {
+      document.getElementById("summaryTable").style.display = "none";
+      document.getElementById("tableState").innerHTML =
+        `<div class="state-box"><strong>Couldn't load trends</strong><p>Check your connection and refresh the page.</p></div>`;
+      AdminUI.toast("Couldn't load trends", "Check your connection and try again.", "error");
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("applyFilters").addEventListener("click", render);
+
+      try {
+        data = await loadParticipation();
+      } catch (err) {
+        console.error("Failed to load participation trends:", err);
+        showLoadError();
+        return;
+      }
+
+      setDefaultRange();
       render();
     });
   </script>

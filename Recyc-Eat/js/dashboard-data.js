@@ -2,6 +2,7 @@
 // Pulls real data from Firestore for the Dashboard Overview page.
 import { db } from "./firebase-config.js";
 import { localDateKey } from "./date-utils.js";
+import { loadKioskSettings, DEFAULT_SETTINGS } from "./kiosk-settings-data.js";
 import {
   collection,
   getDocs,
@@ -48,22 +49,24 @@ function last7DayKeys() {
   return { labels, keys };
 }
 
-function stockStatus(qty, capacity) {
+function stockStatus(qty, capacity, lowAt = 15) {
   if (qty <= 0) return "out";
   const ratio = capacity > 0 ? qty / capacity : 0;
-  if (ratio <= 0.2 || qty <= 15) return "low";
+  if (ratio <= 0.2 || qty <= lowAt) return "low";
   return "ok";
 }
 
 /* ── main export ─────────────────────────────────────────────── */
 
 export async function loadDashboardData() {
-  const [vouchersSnap, sessionsSnap, redemptionsSnap, inventorySnap] = await Promise.all([
+  const [vouchersSnap, sessionsSnap, redemptionsSnap, inventorySnap, settings] = await Promise.all([
     getDocs(collection(db, "vouchers")),
     getDocs(collection(db, "sessions")),
     getDocs(collection(db, "redemptions")),
     getDocs(collection(db, "food_inventory")),
+    loadKioskSettings().catch(() => DEFAULT_SETTINGS),
   ]);
+  const lowAt = settings.lowStockAlert || DEFAULT_SETTINGS.lowStockAlert;
 
   const vouchers = vouchersSnap.docs.map((d) => d.data());
   const sessions = sessionsSnap.docs.map((d) => d.data());
@@ -82,7 +85,7 @@ export async function loadDashboardData() {
   const inventoryWithStatus = inventory.map((item) => {
     const qty = Number(item.qty || 0);
     const capacity = Number(item.capacity || 0);
-    return { ...item, qty, capacity, status: stockStatus(qty, capacity) };
+    return { ...item, qty, capacity, status: stockStatus(qty, capacity, lowAt) };
   });
   const inventoryRemaining = inventoryWithStatus.reduce((sum, i) => sum + i.qty, 0);
   const lowStockItems = inventoryWithStatus.filter(

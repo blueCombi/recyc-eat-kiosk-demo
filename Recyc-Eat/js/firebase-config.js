@@ -109,7 +109,18 @@ export async function redeemReward(voucherID, rewardType) {
   const snap = await getDoc(ref);
   const data = snap.data();
 
-  if (data.total_points < POINTS.threshold)
+  let threshold = POINTS.threshold;
+  try {
+    const cfg = await getDoc(doc(db, "kiosk_settings", "live"));
+    if (cfg.exists()) {
+      const n = Number(cfg.data().redemptionThreshold);
+      if (Number.isFinite(n) && n > 0) threshold = n;
+    }
+  } catch (err) {
+    console.error("Could not read live redemption threshold:", err);
+  }
+
+  if (data.total_points < threshold)
     return { success: false, message: "Not enough points." };
 
   await updateDoc(ref, { status: "redeemed" });
