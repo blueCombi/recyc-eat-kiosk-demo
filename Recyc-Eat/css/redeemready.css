@@ -2,6 +2,12 @@
    Tokens, ring, buttons and background live in kiosk.css. */
 
 .redeem-title { color: var(--green-600); }
+.redeem-title.is-unavailable { color: var(--teal-700); }
+
+.redeem-print {
+  width: 100%;
+  max-width: 420px;
+}
 
 /* points ring beside what the points buy */
 .redeem-row {

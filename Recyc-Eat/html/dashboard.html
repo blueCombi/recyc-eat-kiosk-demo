@@ -10,7 +10,7 @@
   <script src="../js/admin-shared.js" defer></script>
   <script src="../js/admin-auth.js" type="module"></script>
 </head>
-<body class="auth-pending">
+<body class="auth-pending" data-live-inventory>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
   <div class="admin-app">
@@ -189,6 +189,7 @@
       }
 
       lastUpdated.textContent = "Updated just now";
+      AdminUI.refreshStockAlert(data.inventory);
 
       document.getElementById("statItems").textContent = AdminUI.formatNumber(data.totalItems);
       document.getElementById("statRedemptions").textContent = AdminUI.formatNumber(data.totalRedemptions);

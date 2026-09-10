@@ -7,8 +7,9 @@
   <link rel="stylesheet" href="../css/admin-shared.css" />
   <link rel="stylesheet" href="../css/food-inventory.css" />
   <script src="../js/admin-shared.js" defer></script>
+  <script src="../js/admin-auth.js" type="module"></script>
 </head>
-<body>
+<body class="auth-pending" data-live-inventory>
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
   <div class="admin-app">
     <aside class="admin-sidebar" id="adminSidebar">
@@ -43,6 +44,10 @@
             <span class="admin-avatar__mark">AD</span>
             <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
           </div>
+          <button class="btn btn-ghost btn-sm" type="button" id="signOutBtn">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Sign out
+          </button>
         </div>
       </header>
 
@@ -56,10 +61,27 @@
         <div class="page-header">
           <div>
             <h1>Food Inventory</h1>
-            <p>Track stock levels, restock items, and manage reward food products.</p>
+            <p>Live stock in the machine. Restock here, and mark which can is loaded for the kiosk. Low stock uses the threshold in Kiosk Settings (or 20% of capacity). Out of stock is 0 — the kiosk will not redeem that item.</p>
           </div>
           <div class="page-actions">
             <button class="btn btn-primary" type="button" id="addItemBtn">+ Add item</button>
+          </div>
+        </div>
+
+        <div class="stock-alert" id="stockAlert" role="alert" hidden>
+          <div class="stock-alert__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+              <path d="M12 9v4M12 17h.01"/>
+            </svg>
+          </div>
+          <div class="stock-alert__body">
+            <strong class="stock-alert__title" id="stockAlertTitle">Stock reminder</strong>
+            <p class="stock-alert__text" id="stockAlertText">Alerts appear here when an item is low or empty.</p>
+          </div>
+          <div class="stock-alert__actions">
+            <button class="btn btn-ghost btn-sm" type="button" id="ignoreStockBtn">Ignore</button>
+            <button class="btn btn-primary btn-sm" type="button" id="addStockBtn">Restock</button>
           </div>
         </div>
 
@@ -75,12 +97,12 @@
           <article class="card stat-card">
             <div class="stat-card__label">Low stock</div>
             <div class="stat-card__value" id="statLow">0</div>
-            <span class="stat-card__trend trend-down">Needs restock</span>
+            <span class="stat-card__trend trend-flat" id="lowTrend">All healthy</span>
           </article>
           <article class="card stat-card">
             <div class="stat-card__label">Out of stock</div>
             <div class="stat-card__value" id="statOut">0</div>
-            <span class="stat-card__trend trend-down">Unavailable</span>
+            <span class="stat-card__trend trend-flat" id="outTrend">None empty</span>
           </article>
         </section>
 
@@ -95,6 +117,7 @@
                     <th>SKU</th>
                     <th>Level</th>
                     <th>Status</th>
+                    <th>Kiosk</th>
                     <th>Updated</th>
                     <th></th>
                   </tr>
@@ -164,6 +187,28 @@
     </div>
   </div>
 
+  <!-- Restock -->
+  <div class="modal-backdrop" id="restockModal" role="dialog" aria-modal="true" aria-labelledby="restockTitle">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="restockTitle">Restock item</h3>
+        <button class="btn btn-ghost btn-icon" type="button" data-close="restockModal" aria-label="Close">✕</button>
+      </div>
+      <form class="modal-body" id="restockForm">
+        <input type="hidden" id="restockId" />
+        <p id="restockMessage">Add units back into the machine.</p>
+        <div class="field">
+          <label for="restockAmount">Units to add</label>
+          <input class="input" type="number" min="1" id="restockAmount" value="12" required />
+        </div>
+      </form>
+      <div class="modal-footer">
+        <button class="btn btn-ghost" type="button" data-close="restockModal">Cancel</button>
+        <button class="btn btn-primary" type="submit" form="restockForm">Add stock</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Delete confirm -->
   <div class="modal-backdrop" id="deleteModal" role="dialog" aria-modal="true">
     <div class="modal">
@@ -181,7 +226,17 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import {
+      loadInventory,
+      loadInventoryLog,
+      saveItem,
+      restockItem,
+      deleteItem,
+      setLoadedItem,
+    } from "../js/food-inventory-data.js";
+
+    let items = [];
     let pendingDeleteId = null;
 
     function statusBadge(status) {
@@ -190,44 +245,87 @@
       return `<span class="badge badge-success">In stock</span>`;
     }
 
-    function render() {
-      const items = AdminData.getInventory();
+    function render(log = []) {
       document.getElementById("statSkus").textContent = items.length;
       document.getElementById("statUnits").textContent = AdminUI.formatNumber(items.reduce((s, i) => s + i.qty, 0));
-      document.getElementById("statLow").textContent = items.filter((i) => i.status === "low").length;
-      document.getElementById("statOut").textContent = items.filter((i) => i.status === "out").length;
+      const lowCount = items.filter((i) => i.status === "low").length;
+      const outCount = items.filter((i) => i.status === "out").length;
+      document.getElementById("statLow").textContent = lowCount;
+      document.getElementById("statOut").textContent = outCount;
 
-      document.getElementById("inventoryBody").innerHTML = items.map((item) => {
-        const pct = Math.min(100, Math.round((item.qty / item.capacity) * 100));
-        const barClass = item.status === "out" ? "is-out" : item.status === "low" ? "is-low" : "";
-        return `<tr>
-          <td>
-            <strong>${AdminUI.escapeHtml(item.name)}</strong>
-            <div class="inventory-level">
-              <div class="inventory-meta"><span>${item.qty} / ${item.capacity} ${AdminUI.escapeHtml(item.unit)}</span><span>${pct}%</span></div>
-              <div class="progress"><div class="progress__bar ${barClass}" style="width:${pct}%"></div></div>
-            </div>
-          </td>
-          <td>${AdminUI.escapeHtml(item.sku)}</td>
-          <td class="num">${item.qty}</td>
-          <td>${statusBadge(item.status)}</td>
-          <td>${AdminUI.formatDateTime(item.updated)}</td>
-          <td>
-            <div class="inventory-actions">
-              <button class="btn btn-ghost btn-sm" type="button" data-edit="${item.id}">Edit</button>
-              <button class="btn btn-ghost btn-sm" type="button" data-delete="${item.id}">Remove</button>
-            </div>
-          </td>
-        </tr>`;
-      }).join("");
+      const lowTrend = document.getElementById("lowTrend");
+      const outTrend = document.getElementById("outTrend");
+      lowTrend.textContent = lowCount ? "Needs restock" : "All healthy";
+      lowTrend.className = "stat-card__trend " + (lowCount ? "trend-down" : "trend-flat");
+      outTrend.textContent = outCount ? "Unavailable" : "None empty";
+      outTrend.className = "stat-card__trend " + (outCount ? "trend-down" : "trend-flat");
+      AdminUI.refreshStockAlert(items);
 
-      document.getElementById("logBody").innerHTML = AdminData.inventoryLog.map((log) => `
-        <tr>
-          <td>${AdminUI.formatDateTime(log.at)}</td>
-          <td>${AdminUI.escapeHtml(log.item)}</td>
-          <td class="num ${log.change < 0 ? "change-negative" : "change-positive"}">${log.change > 0 ? "+" : ""}${log.change}</td>
-          <td>${AdminUI.escapeHtml(log.reason)}</td>
-        </tr>`).join("");
+      const emptyLoaded = items.find((i) => i.loaded && i.status === "out");
+      if (emptyLoaded) {
+        AdminUI.toast(
+          "Out of stock",
+          `${emptyLoaded.name} is empty. The kiosk will not redeem until you restock.`,
+          "error",
+        );
+      }
+
+      const body = document.getElementById("inventoryBody");
+      if (!items.length) {
+        body.innerHTML = `<tr><td colspan="7" class="state-box">No inventory items yet. Add the can currently in the machine.</td></tr>`;
+      } else {
+        body.innerHTML = items.map((item) => {
+          const pct = Math.min(100, Math.round((item.qty / item.capacity) * 100));
+          const barClass = item.status === "out" ? "is-out" : item.status === "low" ? "is-low" : "";
+          const loaded = item.loaded
+            ? `<span class="badge badge-info">Loaded now</span>`
+            : `<button class="btn btn-ghost btn-sm" type="button" data-load="${item.id}">Load in kiosk</button>`;
+          return `<tr>
+            <td>
+              <strong>${AdminUI.escapeHtml(item.name)}</strong>
+              <div class="inventory-level">
+                <div class="inventory-meta"><span>${item.qty} / ${item.capacity} ${AdminUI.escapeHtml(item.unit)}</span><span>${pct}%</span></div>
+                <div class="progress"><div class="progress__bar ${barClass}" style="width:${pct}%"></div></div>
+              </div>
+            </td>
+            <td>${AdminUI.escapeHtml(item.sku)}</td>
+            <td class="num">${item.qty}</td>
+            <td>${statusBadge(item.status)}</td>
+            <td>${loaded}</td>
+            <td>${item.updated ? AdminUI.formatDateTime(item.updated) : "—"}</td>
+            <td>
+              <div class="inventory-actions">
+                <button class="btn btn-ghost btn-sm" type="button" data-restock="${item.id}">Restock</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-edit="${item.id}">Edit</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-delete="${item.id}">Remove</button>
+              </div>
+            </td>
+          </tr>`;
+        }).join("");
+      }
+
+      const logBody = document.getElementById("logBody");
+      if (!log.length) {
+        logBody.innerHTML = `<tr><td colspan="4" class="state-box">No restocks or redemptions logged yet.</td></tr>`;
+      } else {
+        logBody.innerHTML = log.map((entry) => {
+          const change = Number(entry.change) || 0;
+          const changeClass = change < 0 ? "change-negative" : change > 0 ? "change-positive" : "";
+          const changeLabel = change > 0 ? `+${change}` : String(change);
+          return `<tr>
+            <td>${AdminUI.formatDateTime(entry.at)}</td>
+            <td>${AdminUI.escapeHtml(entry.item || "Item")}</td>
+            <td class="num ${changeClass}">${changeLabel}</td>
+            <td>${AdminUI.escapeHtml(entry.reason || "Updated")}</td>
+          </tr>`;
+        }).join("");
+      }
+    }
+
+    async function refresh() {
+      const [nextItems, log] = await Promise.all([loadInventory(), loadInventoryLog()]);
+      items = nextItems;
+      render(log);
     }
 
     function openAdd() {
@@ -238,7 +336,7 @@
     }
 
     function openEdit(id) {
-      const item = AdminData.getInventory().find((i) => i.id === id);
+      const item = items.find((i) => i.id === id);
       if (!item) return;
       document.getElementById("itemModalTitle").textContent = "Edit inventory item";
       document.getElementById("itemId").value = item.id;
@@ -250,60 +348,120 @@
       AdminUI.openModal("itemModal");
     }
 
-    document.addEventListener("DOMContentLoaded", () => {
-      render();
+    function openRestock(id) {
+      const item = items.find((i) => i.id === id);
+      if (!item) return;
+      document.getElementById("restockId").value = item.id;
+      document.getElementById("restockAmount").value = "12";
+      document.getElementById("restockMessage").textContent =
+        `Add ${item.unit} to “${item.name}” (${item.qty} / ${item.capacity} now).`;
+      AdminUI.openModal("restockModal");
+    }
 
+    function findItem(id) {
+      return items.find((i) => i.id === id);
+    }
+
+    document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("addItemBtn").addEventListener("click", openAdd);
+      document.getElementById("addStockBtn")?.addEventListener("click", () => {
+        const target = items.find((i) => i.loaded && (i.status === "out" || i.status === "low"))
+          || items.find((i) => i.status === "out" || i.status === "low");
+        if (target) openRestock(target.id);
+        else openAdd();
+      });
 
       document.querySelectorAll("[data-close]").forEach((btn) => {
         btn.addEventListener("click", () => AdminUI.closeModal(btn.getAttribute("data-close")));
       });
 
-      document.getElementById("inventoryBody").addEventListener("click", (e) => {
-        const editId = e.target.getAttribute("data-edit");
-        const deleteId = e.target.getAttribute("data-delete");
+      document.getElementById("inventoryBody").addEventListener("click", async (e) => {
+        const button = e.target.closest("[data-edit], [data-delete], [data-restock], [data-load]");
+        if (!button) return;
+        const editId = button.getAttribute("data-edit");
+        const deleteId = button.getAttribute("data-delete");
+        const restockId = button.getAttribute("data-restock");
+        const loadId = button.getAttribute("data-load");
+
         if (editId) openEdit(editId);
+        if (restockId) openRestock(restockId);
+        if (loadId) {
+          try {
+            await setLoadedItem(loadId);
+            AdminUI.toast("Kiosk loaded", `${findItem(loadId)?.name || "Item"} will dispense on the next redemption.`);
+            await refresh();
+          } catch (err) {
+            AdminUI.toast("Couldn't load item", err.message, "error");
+          }
+        }
         if (deleteId) {
           pendingDeleteId = deleteId;
-          const item = AdminData.getInventory().find((i) => i.id === deleteId);
+          const item = findItem(deleteId);
           document.getElementById("deleteMessage").textContent =
             `Remove “${item?.name || "this item"}” from inventory? This cannot be undone.`;
           AdminUI.openModal("deleteModal");
         }
       });
 
-      document.getElementById("confirmDelete").addEventListener("click", () => {
+      document.getElementById("confirmDelete").addEventListener("click", async () => {
         if (!pendingDeleteId) return;
-        AdminData.setInventory(AdminData.getInventory().filter((i) => i.id !== pendingDeleteId));
-        pendingDeleteId = null;
-        AdminUI.closeModal("deleteModal");
-        AdminUI.toast("Item removed", "Inventory updated successfully.");
-        render();
+        try {
+          await deleteItem(pendingDeleteId);
+          pendingDeleteId = null;
+          AdminUI.closeModal("deleteModal");
+          AdminUI.toast("Item removed", "Inventory updated.");
+          await refresh();
+        } catch (err) {
+          AdminUI.toast("Couldn't remove item", err.message, "error");
+        }
       });
 
-      document.getElementById("itemForm").addEventListener("submit", (e) => {
+      document.getElementById("itemForm").addEventListener("submit", async (e) => {
         e.preventDefault();
         const id = document.getElementById("itemId").value;
         const payload = {
-          id: id || `F-${String(Date.now()).slice(-4)}`,
+          id,
           name: document.getElementById("itemName").value.trim(),
           sku: document.getElementById("itemSku").value.trim(),
           qty: Number(document.getElementById("itemQty").value),
           capacity: Number(document.getElementById("itemCapacity").value),
           unit: document.getElementById("itemUnit").value.trim(),
-          updated: new Date().toISOString(),
         };
-        const list = AdminData.getInventory();
-        if (id) {
-          AdminData.setInventory(list.map((i) => (i.id === id ? payload : i)));
-          AdminUI.toast("Item updated", `${payload.name} was saved.`);
-        } else {
-          AdminData.setInventory([payload, ...list]);
-          AdminUI.toast("Item added", `${payload.name} is now in inventory.`);
+        try {
+          await saveItem(payload);
+          AdminUI.closeModal("itemModal");
+          AdminUI.toast(id ? "Item updated" : "Item added", `${payload.name} was saved.`);
+          await refresh();
+        } catch (err) {
+          AdminUI.toast("Couldn't save item", err.message, "error");
         }
-        AdminUI.closeModal("itemModal");
-        render();
       });
+
+      document.getElementById("restockForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const id = document.getElementById("restockId").value;
+        const amount = Number(document.getElementById("restockAmount").value);
+        try {
+          const result = await restockItem(id, amount);
+          AdminUI.closeModal("restockModal");
+          const note = result.grew
+            ? `${result.applied} added. Capacity is now ${result.capacity}.`
+            : `${result.applied} added. Now ${result.qty} in the machine.`;
+          AdminUI.toast("Stock added", note);
+          await refresh();
+        } catch (err) {
+          AdminUI.toast("Couldn't restock", err.message, "error");
+        }
+      });
+
+      try {
+        await refresh();
+      } catch (err) {
+        console.error("Failed to load inventory:", err);
+        document.getElementById("inventoryBody").innerHTML =
+          `<tr><td colspan="7" class="state-box">Couldn't load inventory. Check your connection and refresh.</td></tr>`;
+        AdminUI.toast("Couldn't load inventory", "Check your connection and try again.", "error");
+      }
     });
   </script>
 </body>

@@ -3,6 +3,7 @@
 import { db } from "./firebase-config.js";
 import { localDateKey } from "./date-utils.js";
 import { loadKioskSettings, DEFAULT_SETTINGS } from "./kiosk-settings-data.js";
+import { ensureDefaultInventory } from "./food-inventory-data.js";
 import {
   collection,
   getDocs,
@@ -59,6 +60,7 @@ function stockStatus(qty, capacity, lowAt = 15) {
 /* ── main export ─────────────────────────────────────────────── */
 
 export async function loadDashboardData() {
+  await ensureDefaultInventory();
   const [vouchersSnap, sessionsSnap, redemptionsSnap, inventorySnap, settings] = await Promise.all([
     getDocs(collection(db, "vouchers")),
     getDocs(collection(db, "sessions")),

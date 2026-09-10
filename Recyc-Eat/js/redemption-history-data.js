@@ -31,7 +31,7 @@ export async function loadRedemptions() {
     acc.push({
       id: doc.id,
       receiptId: entry.voucher_id || doc.id,
-      item: rewardLabel(entry.reward_type),
+      item: entry.reward_name || rewardLabel(entry.reward_type),
       rewardType: entry.reward_type || "",
       points: Number(entry.points_used || 0),
       date: entry.redeemed_at,

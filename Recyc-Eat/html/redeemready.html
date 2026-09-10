@@ -32,8 +32,8 @@
       </ol>
 
       <div class="page-heading">
-        <h1 class="kiosk-title redeem-title">Congratulations!</h1>
-        <p class="kiosk-sub">You have enough points for a free canned meal.</p>
+        <h1 class="kiosk-title redeem-title" id="pageTitle">Congratulations!</h1>
+        <p class="kiosk-sub" id="pageSub">You have enough points for a free canned meal.</p>
       </div>
 
       <div class="redeem-row">
@@ -53,8 +53,8 @@
 
         <section class="kiosk-card reward">
           <img src="../images/reward.png" alt="" class="reward__art" aria-hidden="true">
-          <h2 class="reward__title">1 free canned meal</h2>
-          <p class="reward__desc">Tuna or sardines, whichever is loaded today.</p>
+          <h2 class="reward__title" id="rewardTitle">1 free canned meal</h2>
+          <p class="reward__desc" id="rewardDesc">Tuna or sardines, whichever is loaded today.</p>
           <p class="reward__cost"><strong id="rewardCost">50</strong> points</p>
         </section>
       </div>
@@ -63,6 +63,10 @@
         <span aria-hidden="true">&#127873;</span>
         <span id="redeemLabel">REDEEM</span>
       </button>
+
+      <a class="kiosk-btn kiosk-btn--ghost redeem-print" id="printBtn" href="printreceipt.html" hidden>
+        PRINT QR RECEIPT
+      </a>
 
       <p class="redeem-error" id="redeemMsg" role="alert" hidden></p>
     </main>
@@ -76,8 +80,9 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
-    import { POINTS, redeemReward } from '../js/firebase-config.js';
+    import { POINTS, redeemReward, ensureVoucherMatchesSession } from '../js/firebase-config.js';
     import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
+    import { getLoadedReward, UNAVAILABLE_MESSAGE } from '../js/food-inventory-data.js';
 
     try {
       applySettingsToPoints(POINTS, await loadKioskSettings());
@@ -85,18 +90,43 @@
       console.error("Using default point values:", err);
     }
 
-    // the kiosk dispenses whichever canned good is loaded, so there is nothing to pick
-    const REWARD_TYPE = "canned_food";
-
     const button = document.getElementById("redeemBtn");
     const label  = document.getElementById("redeemLabel");
     const error  = document.getElementById("redeemMsg");
+    const printBtn = document.getElementById("printBtn");
 
     let total = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
     if (isNaN(total) || total < 0) total = 0;
 
     document.getElementById("totalPoints").textContent = total;
     document.getElementById("rewardCost").textContent  = POINTS.threshold;
+
+    function showUnavailable(message, loaded) {
+      document.getElementById("pageTitle").textContent = "Sorry, this reward is temporarily unavailable";
+      document.getElementById("pageTitle").classList.add("is-unavailable");
+      document.getElementById("pageSub").textContent = "Keep your points. Staff need to restock the machine.";
+      document.getElementById("rewardTitle").textContent = loaded?.name
+        ? `${loaded.name} is out of stock`
+        : "No can loaded";
+      document.getElementById("rewardDesc").textContent = message || UNAVAILABLE_MESSAGE;
+      button.hidden = true;
+      printBtn.hidden = false;
+      document.querySelector(".kiosk-info span:last-child").textContent =
+        "Print your QR receipt and come back after the machine is restocked.";
+    }
+
+    try {
+      const loaded = await getLoadedReward();
+      if (!loaded || loaded.qty < 1) {
+        showUnavailable(UNAVAILABLE_MESSAGE, loaded);
+      } else {
+        document.getElementById("rewardTitle").textContent = `1 free ${loaded.name}`;
+        document.getElementById("rewardDesc").textContent =
+          `${loaded.name} is loaded today. ${loaded.qty} left in the machine.`;
+      }
+    } catch (err) {
+      console.error("Could not read loaded reward:", err);
+    }
 
     function dispense() {
       sessionStorage.removeItem("voucherID");
@@ -116,19 +146,34 @@
       error.hidden = true;
       label.textContent = "Processing...";
 
-      const voucherID = sessionStorage.getItem("voucherID");
-
-      // no voucher means the points only ever lived in this session, so
-      // there is nothing to mark redeemed in Firebase
-      if (!voucherID) {
-        dispense();
-        return;
-      }
+      let voucherID = sessionStorage.getItem("voucherID");
+      let sessionItems = [];
+      try { sessionItems = JSON.parse(sessionStorage.getItem("sessionItems") || "[]"); }
+      catch { sessionItems = []; }
 
       try {
-        await redeemReward(voucherID, REWARD_TYPE);
+        voucherID = await ensureVoucherMatchesSession(voucherID, total, sessionItems);
+        if (voucherID) sessionStorage.setItem("voucherID", voucherID);
+
+        const result = await redeemReward(voucherID, "canned_food");
+        if (!result.success) {
+          if (result.code === "unavailable") {
+            showUnavailable(result.message);
+            return;
+          }
+          error.textContent = result.message || "Could not redeem right now.";
+          error.hidden = false;
+          button.disabled = false;
+          label.textContent = "REDEEM";
+          return;
+        }
       } catch (err) {
-        // the can is already being released, so never block on the network
+        console.error("Redeem failed:", err);
+        error.textContent = "Could not reach the dispenser. Try again.";
+        error.hidden = false;
+        button.disabled = false;
+        label.textContent = "REDEEM";
+        return;
       }
 
       dispense();

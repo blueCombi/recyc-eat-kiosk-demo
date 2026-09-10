@@ -96,6 +96,8 @@ const AdminUI = (() => {
     }
   }
 
+  let lastAlertItems = [];
+
   function initStockAlert() {
     const content = document.querySelector(".admin-content");
     if (!content || typeof AdminData === "undefined") return;
@@ -130,7 +132,27 @@ const AdminUI = (() => {
       else content.prepend(alertEl);
     }
 
-    const activeAlerts = AdminData.getActiveStockAlerts();
+    if (document.body.hasAttribute("data-live-inventory")) return;
+    refreshStockAlert(AdminData.getActiveStockAlerts());
+  }
+
+  function refreshStockAlert(items) {
+    const content = document.querySelector(".admin-content");
+    if (!content) return;
+
+    let alertEl = document.getElementById("stockAlert");
+    if (!alertEl) {
+      initStockAlert();
+      alertEl = document.getElementById("stockAlert");
+    }
+    if (!alertEl) return;
+
+    const ignored = AdminData.getIgnoredStock();
+    const activeAlerts = (items || []).filter((item) => {
+      if (item.status !== "low" && item.status !== "out") return false;
+      if (!(item.id in ignored)) return true;
+      return Number(ignored[item.id]) !== Number(item.qty);
+    });
     const textEl = document.getElementById("stockAlertText");
     const ignoreBtn = document.getElementById("ignoreStockBtn");
 
@@ -138,6 +160,8 @@ const AdminUI = (() => {
       alertEl.hidden = true;
       return;
     }
+
+    lastAlertItems = activeAlerts;
 
     const names = activeAlerts.map((i) => i.name).join(", ");
     const hasOut = activeAlerts.some((i) => i.status === "out");
@@ -147,6 +171,10 @@ const AdminUI = (() => {
       textEl.textContent = hasOut
         ? `${names} ${activeAlerts.length === 1 ? "is" : "are"} running low or out of stock. Restock soon so rewards stay available.`
         : `${names} ${activeAlerts.length === 1 ? "is" : "are"} running low. Add stock soon so rewards stay available.`;
+    }
+    const titleEl = document.getElementById("stockAlertTitle") || alertEl.querySelector(".stock-alert__title");
+    if (titleEl) {
+      titleEl.textContent = hasOut ? "Out of stock" : "Low stock reminder";
     }
 
     // Play once per alert set this session (not on every page switch)
@@ -159,8 +187,7 @@ const AdminUI = (() => {
     if (ignoreBtn && !ignoreBtn.dataset.bound) {
       ignoreBtn.dataset.bound = "1";
       ignoreBtn.addEventListener("click", () => {
-        const current = AdminData.getActiveStockAlerts();
-        AdminData.ignoreStockAlerts(current);
+        AdminData.ignoreStockAlerts(lastAlertItems);
         alertEl.hidden = true;
         toast("Reminder dismissed", "You can restock anytime from Food Inventory.");
       });
@@ -191,7 +218,7 @@ const AdminUI = (() => {
     initStockAlert();
   }
 
-  return { initShell, initStockAlert, toast, openModal, closeModal, escapeHtml, formatDate, formatDateTime, formatNumber };
+  return { initShell, initStockAlert, refreshStockAlert, toast, openModal, closeModal, escapeHtml, formatDate, formatDateTime, formatNumber };
 })();
 
 /* Demo datasets used across admin pages */

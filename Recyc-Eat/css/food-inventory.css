@@ -18,6 +18,11 @@
   display: flex;
   gap: 6px;
   justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.inventory-kiosk-cell {
+  white-space: nowrap;
 }
 
 .inventory-form-grid {

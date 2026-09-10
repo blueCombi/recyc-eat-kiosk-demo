@@ -127,12 +127,23 @@
     }
 
     // ── go to redeem if enough points ────────────────────────────
+    function goAfterWrites(url) {
+      lastWrite.then(() => {
+        window.location.href = url;
+      }).catch((err) => {
+        console.error("Could not save points before leaving:", err);
+        redirecting = false;
+        if (finishBtn) finishBtn.disabled = false;
+      });
+    }
+
     function checkRedeem(total) {
-      if (total >= POINTS.threshold && !redirecting) {
-        redirecting = true;
-        sessionStorage.setItem("totalPoints", total);
-        setTimeout(() => { window.location.href = "redeemready.html"; }, 900);
-      }
+      if (total < POINTS.threshold || redirecting) return;
+      redirecting = true;
+      sessionStorage.setItem("totalPoints", total);
+      // wait until the last insert is in Firestore, otherwise Redeem
+      // reads a receipt that is still 5–10 points short
+      goAfterWrites("redeemready.html");
     }
 
     // ── load initial state ────────────────────────────────────────
@@ -176,9 +187,11 @@
     // used to start several createVoucher calls at once, each minting its
     // own receipt ID and splitting the points across vouchers.
     let writeQueue = Promise.resolve();
+    let lastWrite = Promise.resolve();
 
     function queueWrite(task) {
-      writeQueue = writeQueue.then(task).catch(err => console.error("Sync failed:", err));
+      lastWrite = writeQueue.then(task);
+      writeQueue = lastWrite.catch(err => console.error("Sync failed:", err));
     }
 
     // ── add points + save to Firebase ────────────────────────────
@@ -245,13 +258,12 @@
 
     finishBtn.addEventListener("click", function (e) {
       e.preventDefault();
-      if (totalPoints >= POINTS.threshold) {
-        sessionStorage.setItem("totalPoints", totalPoints);
-        window.location.href = "redeemready.html";
-      } else {
-        sessionStorage.setItem("totalPoints", totalPoints);
-        window.location.href = "notenoughpoints.html";
-      }
+      if (redirecting) return;
+      finishBtn.disabled = true;
+      sessionStorage.setItem("totalPoints", totalPoints);
+      redirecting = true;
+      const next = totalPoints >= POINTS.threshold ? "redeemready.html" : "notenoughpoints.html";
+      goAfterWrites(next);
     });
 
     init();

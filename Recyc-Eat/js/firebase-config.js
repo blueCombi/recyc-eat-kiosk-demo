@@ -1,6 +1,6 @@
 // firebase-config.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, doc, setDoc, getDoc, updateDoc, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -88,10 +88,8 @@ export async function scanVoucher(voucherID) {
 export async function addPoints(voucherID, newItems, pointsToAdd) {
   const ref    = doc(db, "vouchers", voucherID);
   const logged = freeze(newItems);
-  const snap   = await getDoc(ref);
-  const newTotal = snap.data().total_points + pointsToAdd;
 
-  await updateDoc(ref, { total_points: newTotal });
+  await updateDoc(ref, { total_points: increment(pointsToAdd) });
   await setDoc(doc(db, "sessions", `${voucherID}_${Date.now()}`), {
     voucher_id:    voucherID,
     items:         logged,
@@ -100,38 +98,65 @@ export async function addPoints(voucherID, newItems, pointsToAdd) {
     action:        "continued",
   });
 
-  return newTotal;
+  const snap = await getDoc(ref);
+  return snap.exists() ? Number(snap.data().total_points) || 0 : 0;
+}
+
+// The kiosk counts points in the browser first. If the page moved on before
+// every insert finished uploading, Firestore can lag behind the ring. Bring
+// the saved receipt up to the session total before Redeem checks it.
+export async function ensureVoucherMatchesSession(voucherID, sessionTotal, sessionItems = []) {
+  const total = Number(sessionTotal) || 0;
+  const items = freeze(sessionItems);
+  const now = new Date().toISOString();
+
+  if (!voucherID) {
+    return createVoucher(items, total, total);
+  }
+
+  const ref = doc(db, "vouchers", voucherID);
+  const snap = await getDoc(ref);
+
+  if (!snap.exists()) {
+    await setDoc(ref, {
+      voucher_id: voucherID,
+      total_points: total,
+      status: "active",
+      created_at: now,
+    });
+    await setDoc(doc(db, "sessions", `${voucherID}_${Date.now()}`), {
+      voucher_id: voucherID,
+      items,
+      points_earned: total,
+      session_date: now,
+      action: "synced",
+    });
+    return voucherID;
+  }
+
+  if (snap.data().status === "redeemed") return voucherID;
+
+  const current = Number(snap.data().total_points) || 0;
+  if (total > current) {
+    await updateDoc(ref, { total_points: total });
+    await setDoc(doc(db, "sessions", `${voucherID}_${Date.now()}`), {
+      voucher_id: voucherID,
+      items,
+      points_earned: total - current,
+      session_date: now,
+      action: "synced",
+    });
+  }
+
+  return voucherID;
 }
 
 // ─── Redeem food reward ──────────────────────────────────────────
+// Marks the voucher redeemed and subtracts 1 from the loaded inventory
+// item. Fails (without dispensing) when that item is missing or at 0.
 export async function redeemReward(voucherID, rewardType) {
-  const ref  = doc(db, "vouchers", voucherID);
-  const snap = await getDoc(ref);
-  const data = snap.data();
-
-  let threshold = POINTS.threshold;
-  try {
-    const cfg = await getDoc(doc(db, "kiosk_settings", "live"));
-    if (cfg.exists()) {
-      const n = Number(cfg.data().redemptionThreshold);
-      if (Number.isFinite(n) && n > 0) threshold = n;
-    }
-  } catch (err) {
-    console.error("Could not read live redemption threshold:", err);
-  }
-
-  if (data.total_points < threshold)
-    return { success: false, message: "Not enough points." };
-
-  await updateDoc(ref, { status: "redeemed" });
-  await setDoc(doc(db, "redemptions", voucherID), {
-    voucher_id:  voucherID,
-    points_used: data.total_points,
-    reward_type: rewardType,
-    redeemed_at: new Date().toISOString(),
-  });
-
-  return { success: true };
+  const { consumeLoadedReward } = await import("./food-inventory-data.js");
+  return consumeLoadedReward(voucherID, rewardType);
 }
 
 export { db, auth, authReady };  
