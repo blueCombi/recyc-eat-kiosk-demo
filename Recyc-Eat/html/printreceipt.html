@@ -86,36 +86,81 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
-    import { createVoucher, generateReceiptID } from '../js/firebase-config.js';
+    import { createVoucher } from "../js/firebase-config.js";
+    import { printReceipt, countSessionItems } from "../js/print-button-snippet.js";
+    import { loadKioskSettings, DEFAULT_SETTINGS } from "../js/kiosk-settings-data.js";
+
+    function sessionItems() {
+      try {
+        const items = JSON.parse(sessionStorage.getItem("sessionItems") || "[]");
+        return Array.isArray(items) ? items : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function goToComplete() {
+      window.location.href = "printcomplete.html";
+    }
 
     async function generateAndSave() {
-      const statusText    = document.getElementById("statusText");
-      const voucherDisplay= document.getElementById("voucherDisplay");
+      const statusText = document.getElementById("statusText");
+      const voucherDisplay = document.getElementById("voucherDisplay");
 
-      // get existing voucher ID if already created during this session
       let voucherID = sessionStorage.getItem("voucherID");
-      const totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+      const totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0", 10) || 0;
+      const items = sessionItems();
 
-      // if no voucher yet (e.g. user went straight to print), create one now
       if (!voucherID) {
         voucherID = await createVoucher([], totalPoints);
         sessionStorage.setItem("voucherID", voucherID);
       }
 
-      // generated at 128px and scaled down by CSS so it stays crisp
       new QRCode(document.getElementById("qrcode"), {
-        text:   voucherID,
-        width:  128,
+        text: voucherID,
+        width: 128,
         height: 128,
       });
 
       voucherDisplay.textContent = "Receipt ID: " + voucherID;
-      statusText.textContent     = "Printing your QR voucher...";
 
-      // redirect to print complete after 3.5 seconds
-      setTimeout(function () {
-        window.location.href = "printcomplete.html";
-      }, 3500);
+      let shouldPrint = DEFAULT_SETTINGS.autoPrint;
+      try {
+        const settings = await loadKioskSettings();
+        shouldPrint = settings.autoPrint !== false;
+      } catch {
+        /* defaults: print */
+      }
+
+      if (!shouldPrint) {
+        statusText.textContent = "Receipt saved. Continuing…";
+        setTimeout(goToComplete, 1200);
+        return;
+      }
+
+      statusText.classList.remove("is-error");
+      statusText.textContent = "Sending to the thermal printer…";
+
+      try {
+        await printReceipt({
+          points: totalPoints,
+          itemsRecycled: countSessionItems(items),
+          items,
+          voucherCode: voucherID,
+          redeemUrl: voucherID,
+        });
+        statusText.textContent = "Printed. Take your receipt from the slot.";
+        setTimeout(goToComplete, 1400);
+      } catch (err) {
+        console.error("Thermal print failed:", err);
+        statusText.classList.add("is-error");
+        const detail = String(err.message || "").trim();
+        const offline = /Failed to fetch|NetworkError|Load failed/i.test(detail);
+        statusText.textContent = offline
+          ? "Printer server is off. Your QR is still saved — continuing."
+          : `Couldn't print${detail ? `: ${detail.slice(0, 90)}` : ""}. Your QR is still on the next screen.`;
+        setTimeout(goToComplete, 3200);
+      }
     }
 
     generateAndSave();
