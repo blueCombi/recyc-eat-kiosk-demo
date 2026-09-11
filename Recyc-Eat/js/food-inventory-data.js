@@ -1,6 +1,6 @@
 // food-inventory-data.js
-// Live canned-food stock for the admin page and the kiosk dispenser.
-import { db, POINTS } from "./firebase-config.js";
+// Four vending coils in Firestore (`food_inventory`). Button N is always coil N.
+import { db } from "./firebase-config.js";
 import {
   addDoc,
   collection,
@@ -16,17 +16,16 @@ import {
 import { loadKioskSettings, DEFAULT_SETTINGS } from "./kiosk-settings-data.js";
 
 export const UNAVAILABLE_MESSAGE = "Sorry, this reward is temporarily unavailable.";
+export const COIL_COUNT = 4;
 
 const INVENTORY = collection(db, "food_inventory");
 const LOG = collection(db, "inventory_log");
 
-const DEFAULT_ITEMS = [
-  { id: "F-01", name: "Canned Meal A", sku: "CMA-01", qty: 86, capacity: 120, unit: "cans", loaded: true },
-  { id: "F-02", name: "Canned Meal B", sku: "CMB-01", qty: 42, capacity: 100, unit: "cans", loaded: false },
-  { id: "F-03", name: "Canned Meal C", sku: "CMC-01", qty: 18, capacity: 80, unit: "cans", loaded: false },
-  { id: "F-04", name: "Snack Pack", sku: "SNP-01", qty: 7, capacity: 60, unit: "packs", loaded: false },
-  { id: "F-05", name: "Rice Meal Box", sku: "RMB-01", qty: 0, capacity: 40, unit: "boxes", loaded: false },
-  { id: "F-06", name: "Fruit Cup", sku: "FRC-01", qty: 55, capacity: 70, unit: "cups", loaded: false },
+export const DEFAULT_COILS = [
+  { id: "coil-1", sku: "SPAG-01", name: "Spaghetti pack", coilNumber: 1, qty: 24, capacity: 40, unit: "packs", pointCost: 40 },
+  { id: "coil-2", sku: "SARD-01", name: "Canned sardines", coilNumber: 2, qty: 36, capacity: 50, unit: "cans", pointCost: 50 },
+  { id: "coil-3", sku: "TUNA-01", name: "Canned tuna", coilNumber: 3, qty: 36, capacity: 50, unit: "cans", pointCost: 50 },
+  { id: "coil-4", sku: "BEEF-01", name: "Corned beef", coilNumber: 4, qty: 30, capacity: 40, unit: "cans", pointCost: 55 },
 ];
 
 export function stockStatus(item, lowAt = 15) {
@@ -38,17 +37,48 @@ export function stockStatus(item, lowAt = 15) {
   return "ok";
 }
 
+function skuKey(sku) {
+  return String(sku || "").trim().toLowerCase();
+}
+
+function coilOf(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return 0;
+  const coil = Math.round(n);
+  return coil >= 1 && coil <= COIL_COUNT ? coil : 0;
+}
+
+function defaultForCoil(coilNumber) {
+  return DEFAULT_COILS.find((item) => item.coilNumber === coilNumber) || DEFAULT_COILS[0];
+}
+
+function coilPayload(seed, now) {
+  return {
+    sku: seed.sku,
+    name: seed.name,
+    coilNumber: seed.coilNumber,
+    qty: seed.qty,
+    capacity: seed.capacity,
+    unit: seed.unit,
+    pointCost: seed.pointCost,
+    updated: now,
+  };
+}
+
 function normalizeItem(id, data, lowAt) {
+  const seed = defaultForCoil(coilOf(data?.coilNumber) || Number(String(id).replace("coil-", "")) || 0);
   const qty = Math.max(0, Number(data?.qty) || 0);
-  const capacity = Math.max(1, Number(data?.capacity) || 1);
+  const capacity = Math.max(1, Number(data?.capacity) || seed.capacity || 1);
+  const coilNumber = coilOf(data?.coilNumber) || seed.coilNumber || 0;
   const item = {
     id,
-    name: String(data?.name || "Unnamed item").trim() || "Unnamed item",
-    sku: String(data?.sku || id).trim() || id,
+    name: String(data?.name || seed.name || "Unnamed item").trim() || "Unnamed item",
+    sku: String(data?.sku || seed.sku || id).trim() || id,
+    coilNumber,
     qty,
     capacity,
-    unit: String(data?.unit || "cans").trim() || "cans",
-    loaded: Boolean(data?.loaded),
+    unit: String(data?.unit || seed.unit || "cans").trim() || "cans",
+    pointCost: Math.max(1, Number(data?.pointCost) || seed.pointCost || 50),
     updated: data?.updated || null,
   };
   return { ...item, status: stockStatus(item, lowAt) };
@@ -74,99 +104,80 @@ async function writeLog({ itemId, item, change, reason, voucherId = null }) {
   });
 }
 
+function mapItems(snap, lowAt) {
+  return snap.docs.map((entry) => normalizeItem(entry.id, entry.data(), lowAt));
+}
+
+function sortInventory(items) {
+  return [...items].sort((a, b) => {
+    if (a.coilNumber && b.coilNumber && a.coilNumber !== b.coilNumber) {
+      return a.coilNumber - b.coilNumber;
+    }
+    if (a.coilNumber !== b.coilNumber) return a.coilNumber ? -1 : 1;
+    return a.name.localeCompare(b.name);
+  });
+}
+
 export async function ensureDefaultInventory() {
   const snap = await getDocs(INVENTORY);
-  if (!snap.empty) return;
-
+  const existing = snap.docs.map((entry) => ({ id: entry.id, ...entry.data() }));
   const now = new Date().toISOString();
   const batch = writeBatch(db);
-  DEFAULT_ITEMS.forEach((item) => {
-    batch.set(doc(INVENTORY, item.id), {
-      name: item.name,
-      sku: item.sku,
-      qty: item.qty,
-      capacity: item.capacity,
-      unit: item.unit,
-      loaded: Boolean(item.loaded),
-      updated: now,
-    });
-  });
-  await batch.commit();
-}
+  let writes = 0;
 
-function skuKey(sku) {
-  return String(sku || "").trim().toLowerCase();
-}
-
-function recency(item) {
-  const t = new Date(item.updated || 0).getTime();
-  return Number.isFinite(t) ? t : 0;
-}
-
-function pickKeeper(group) {
-  return [...group].sort((a, b) => {
-    if (a.loaded !== b.loaded) return a.loaded ? -1 : 1;
-    if (b.qty !== a.qty) return b.qty - a.qty;
-    return recency(b) - recency(a);
-  })[0];
-}
-
-async function mergeDuplicateSkus(items) {
-  const groups = new Map();
-  items.forEach((item) => {
-    const key = skuKey(item.sku);
-    if (!key) return;
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(item);
+  const hasCoils = existing.some((item) => coilOf(item.coilNumber));
+  DEFAULT_COILS.forEach((seed) => {
+    const match = existing.find((item) => coilOf(item.coilNumber) === seed.coilNumber)
+      || existing.find((item) => item.id === seed.id);
+    if (match) return;
+    const qty = hasCoils ? 0 : seed.qty;
+    batch.set(doc(INVENTORY, seed.id), coilPayload({ ...seed, qty }, now));
+    writes += 1;
   });
 
-  const extras = [];
-  groups.forEach((group) => {
-    if (group.length < 2) return;
-    const keeper = pickKeeper(group);
-    group.forEach((item) => {
-      if (item.id !== keeper.id) extras.push(item);
-    });
+  existing.forEach((item) => {
+    if (coilOf(item.coilNumber)) return;
+    if (DEFAULT_COILS.some((seed) => seed.id === item.id)) return;
+    batch.delete(doc(INVENTORY, item.id));
+    writes += 1;
   });
 
-  if (!extras.length) return false;
-
-  await Promise.all(extras.map(async (item) => {
-    await deleteDoc(doc(INVENTORY, item.id));
-    await writeLog({
-      itemId: item.id,
-      item: item.name,
-      change: 0,
-      reason: "Merged duplicate",
-    });
-  }));
-  return true;
-}
-
-async function ensureOneLoaded(items) {
-  if (items.some((item) => item.loaded)) return false;
-  const candidate = items.find((item) => item.qty > 0) || items[0];
-  if (!candidate) return false;
-  await setLoadedItem(candidate.id);
-  return true;
+  if (writes) await batch.commit();
 }
 
 export async function loadInventory() {
   await ensureDefaultInventory();
   const lowAt = await lowStockThreshold();
-  let snap = await getDocs(INVENTORY);
-  let items = snap.docs.map((entry) => normalizeItem(entry.id, entry.data(), lowAt));
+  const snap = await getDocs(INVENTORY);
+  return sortInventory(mapItems(snap, lowAt));
+}
 
-  if (await mergeDuplicateSkus(items)) {
-    snap = await getDocs(INVENTORY);
-    items = snap.docs.map((entry) => normalizeItem(entry.id, entry.data(), lowAt));
-  }
-  if (await ensureOneLoaded(items)) {
-    snap = await getDocs(INVENTORY);
-    items = snap.docs.map((entry) => normalizeItem(entry.id, entry.data(), lowAt));
-  }
+export async function loadCoilInventory() {
+  const items = await loadInventory();
+  return DEFAULT_COILS.map((seed) => {
+    return items.find((item) => item.coilNumber === seed.coilNumber)
+      || normalizeItem(seed.id, coilPayload({ ...seed, qty: 0 }, null), 15);
+  });
+}
 
-  return items.sort((a, b) => a.name.localeCompare(b.name));
+export async function getItemByCoil(coilNumber) {
+  const coil = coilOf(coilNumber);
+  if (!coil) return null;
+  const items = await loadCoilInventory();
+  return items.find((item) => item.coilNumber === coil) || null;
+}
+
+export async function getItemBySku(sku) {
+  const key = skuKey(sku);
+  if (!key) return null;
+  const items = await loadInventory();
+  return items.find((item) => skuKey(item.sku) === key) || null;
+}
+
+export async function getMinRewardCost() {
+  const coils = await loadCoilInventory();
+  const costs = coils.map((item) => item.pointCost).filter((n) => n > 0);
+  return costs.length ? Math.min(...costs) : 50;
 }
 
 export async function loadInventoryLog() {
@@ -178,35 +189,41 @@ export async function loadInventoryLog() {
     .slice(0, 40);
 }
 
-export async function getLoadedReward() {
-  const items = await loadInventory();
-  return items.find((item) => item.loaded) || null;
-}
-
 export async function saveItem(payload) {
-  const id = String(payload.id || "").trim() || `F-${Date.now()}`;
+  const coilNumber = coilOf(payload.coilNumber);
+  const id = String(payload.id || "").trim() || (coilNumber ? `coil-${coilNumber}` : `F-${Date.now()}`);
   const ref = doc(INVENTORY, id);
   const prev = await getDoc(ref);
   const now = new Date().toISOString();
+  const seed = defaultForCoil(coilNumber);
   const next = {
     name: String(payload.name || "").trim(),
     sku: String(payload.sku || "").trim(),
+    coilNumber,
     qty: Math.max(0, Number(payload.qty) || 0),
     capacity: Math.max(1, Number(payload.capacity) || 1),
-    unit: String(payload.unit || "cans").trim() || "cans",
-    loaded: prev.exists() ? Boolean(prev.data().loaded) : false,
+    unit: String(payload.unit || seed.unit || "cans").trim() || "cans",
+    pointCost: Math.max(1, Number(payload.pointCost) || seed.pointCost || 50),
     updated: now,
   };
   if (!next.name || !next.sku) throw new Error("Name and SKU are required.");
+  if (!next.coilNumber) throw new Error("Pick coil 1 through 4.");
   if (next.qty > next.capacity) next.qty = next.capacity;
 
   const others = await getDocs(INVENTORY);
-  const duplicate = others.docs.find((entry) => {
+  const skuClash = others.docs.find((entry) => {
     if (entry.id === id) return false;
     return skuKey(entry.data().sku) === skuKey(next.sku);
   });
-  if (duplicate) {
-    throw new Error(`SKU ${next.sku} is already used by ${duplicate.data().name || "another item"}.`);
+  if (skuClash) {
+    throw new Error(`SKU ${next.sku} is already used by ${skuClash.data().name || "another item"}.`);
+  }
+  const coilClash = others.docs.find((entry) => {
+    if (entry.id === id) return false;
+    return coilOf(entry.data().coilNumber) === next.coilNumber;
+  });
+  if (coilClash) {
+    throw new Error(`Coil ${next.coilNumber} is already ${coilClash.data().name || "in use"}.`);
   }
 
   await setDoc(ref, next, { merge: true });
@@ -226,6 +243,22 @@ export async function saveItem(payload) {
   }
 
   return id;
+}
+
+export async function saveCoilCatalog(rows) {
+  const coils = await loadCoilInventory();
+  const now = new Date().toISOString();
+
+  for (const row of rows || []) {
+    const coilNumber = coilOf(row.coilNumber);
+    if (!coilNumber) continue;
+    const item = coils.find((entry) => entry.coilNumber === coilNumber);
+    if (!item) continue;
+    const name = String(row.name || "").trim();
+    const pointCost = Math.max(1, Number(row.pointCost) || item.pointCost);
+    if (!name) throw new Error(`Coil ${coilNumber} needs a name.`);
+    await updateDoc(doc(INVENTORY, item.id), { name, pointCost, updated: now });
+  }
 }
 
 export async function restockItem(id, amount) {
@@ -256,6 +289,7 @@ export async function deleteItem(id) {
   const snap = await getDoc(ref);
   if (!snap.exists()) return;
   const data = snap.data();
+  const coilNumber = coilOf(data.coilNumber);
   await deleteDoc(ref);
   await writeLog({
     itemId: id,
@@ -263,25 +297,17 @@ export async function deleteItem(id) {
     change: -(Number(data.qty) || 0),
     reason: "Removed",
   });
-}
-
-export async function setLoadedItem(id) {
-  const target = await getDoc(doc(INVENTORY, id));
-  if (!target.exists()) throw new Error("That item is no longer in inventory.");
-
-  const snap = await getDocs(INVENTORY);
-  const batch = writeBatch(db);
-  const now = new Date().toISOString();
-  snap.docs.forEach((entry) => {
-    batch.update(entry.ref, { loaded: entry.id === id, updated: now });
-  });
-  await batch.commit();
-  await writeLog({
-    itemId: id,
-    item: target.data().name,
-    change: 0,
-    reason: "Loaded in kiosk",
-  });
+  if (coilNumber) {
+    const seed = defaultForCoil(coilNumber);
+    const now = new Date().toISOString();
+    await setDoc(doc(INVENTORY, seed.id), coilPayload({ ...seed, qty: 0 }, now));
+    await writeLog({
+      itemId: seed.id,
+      item: seed.name,
+      change: 0,
+      reason: `Reset coil ${coilNumber}`,
+    });
+  }
 }
 
 function fail(code, message) {
@@ -290,46 +316,39 @@ function fail(code, message) {
   return err;
 }
 
-export async function consumeLoadedReward(voucherID, rewardType = "canned_food") {
-  const loaded = await getLoadedReward();
-  if (!loaded || loaded.qty < 1) {
+export async function consumeReward(voucherID, sku) {
+  const listed = await getItemBySku(sku);
+  if (!listed) {
     return { success: false, code: "unavailable", message: UNAVAILABLE_MESSAGE };
   }
 
-  const itemRef = doc(INVENTORY, loaded.id);
+  const itemRef = doc(INVENTORY, listed.id);
   const voucherRef = voucherID ? doc(db, "vouchers", voucherID) : null;
   const redemptionRef = voucherID
     ? doc(db, "redemptions", voucherID)
     : doc(collection(db, "redemptions"));
   const logRef = doc(LOG);
-  const settingsRef = doc(db, "kiosk_settings", "live");
 
   try {
     await runTransaction(db, async (transaction) => {
       const itemSnap = await transaction.get(itemRef);
-      const settingsSnap = await transaction.get(settingsRef);
       const voucherSnap = voucherRef ? await transaction.get(voucherRef) : null;
 
       if (!itemSnap.exists()) throw fail("unavailable", UNAVAILABLE_MESSAGE);
       const item = itemSnap.data();
       const qty = Number(item.qty) || 0;
-      if (!item.loaded || qty < 1) throw fail("unavailable", UNAVAILABLE_MESSAGE);
+      if (qty <= 0) throw fail("unavailable", "Out of stock");
 
-      let threshold = POINTS.threshold;
-      if (settingsSnap.exists()) {
-        const n = Number(settingsSnap.data().redemptionThreshold);
-        if (Number.isFinite(n) && n > 0) threshold = n;
-      }
-
-      let pointsUsed = 0;
+      const pointCost = Math.max(1, Number(item.pointCost) || listed.pointCost || 50);
+      let pointsUsed = pointCost;
       if (voucherRef) {
         if (!voucherSnap.exists()) throw fail("missing", "QR not found.");
         const voucher = voucherSnap.data();
         if (voucher.status === "redeemed") throw fail("redeemed", "QR already redeemed.");
-        if (Number(voucher.total_points) < threshold) {
-          throw fail("points", `Not enough points. You need ${threshold}.`);
+        if (Number(voucher.total_points) < pointCost) {
+          throw fail("points", `Not enough points. You need ${pointCost}.`);
         }
-        pointsUsed = Number(voucher.total_points) || 0;
+        pointsUsed = pointCost;
       }
 
       const now = new Date().toISOString();
@@ -338,31 +357,47 @@ export async function consumeLoadedReward(voucherID, rewardType = "canned_food")
       transaction.set(redemptionRef, {
         voucher_id: voucherID || null,
         points_used: pointsUsed,
-        reward_type: rewardType,
+        reward_type: item.sku || sku,
         reward_name: item.name,
-        item_id: loaded.id,
+        item_id: listed.id,
+        coil_number: coilOf(item.coilNumber) || listed.coilNumber,
         redeemed_at: now,
       });
       transaction.set(logRef, {
         at: now,
-        itemId: loaded.id,
+        itemId: listed.id,
         item: item.name,
         change: -1,
-        reason: "Redeemed",
+        reason: "Redemption",
         voucher_id: voucherID || null,
       });
     });
-    } catch (err) {
-      const code = err.code;
-      const message = String(err.message || "");
-      if (code === "unavailable" || message.includes("temporarily unavailable")) {
-        return { success: false, code: "unavailable", message: UNAVAILABLE_MESSAGE };
-      }
-      if (code === "points" || code === "redeemed" || code === "missing") {
-        return { success: false, code, message: err.message };
-      }
-      throw err;
+  } catch (err) {
+    const code = err.code;
+    const message = String(err.message || "");
+    if (code === "unavailable" || message.toLowerCase().includes("out of stock") || message.includes("temporarily unavailable")) {
+      return { success: false, code: "unavailable", message: err.message || UNAVAILABLE_MESSAGE };
     }
+    if (code === "points" || code === "redeemed" || code === "missing") {
+      return { success: false, code, message: err.message };
+    }
+    throw err;
+  }
 
-  return { success: true, item: loaded.name };
+  const fresh = await getDoc(itemRef);
+  const data = fresh.exists() ? fresh.data() : listed;
+  return {
+    success: true,
+    item: data.name || listed.name,
+    sku: data.sku || listed.sku,
+    coilNumber: coilOf(data.coilNumber) || listed.coilNumber,
+    pointCost: Number(data.pointCost) || listed.pointCost,
+  };
+}
+
+export async function consumeLoadedReward(voucherID, rewardType = "") {
+  const sku = skuKey(rewardType) && skuKey(rewardType) !== "canned_food"
+    ? rewardType
+    : (await loadCoilInventory()).find((item) => item.qty > 0)?.sku;
+  return consumeReward(voucherID, sku);
 }

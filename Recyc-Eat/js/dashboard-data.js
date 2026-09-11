@@ -88,7 +88,7 @@ export async function loadDashboardData() {
     const qty = Number(item.qty || 0);
     const capacity = Number(item.capacity || 0);
     return { ...item, qty, capacity, status: stockStatus(qty, capacity, lowAt) };
-  });
+  }).sort((a, b) => (Number(a.coilNumber) || 99) - (Number(b.coilNumber) || 99));
   const inventoryRemaining = inventoryWithStatus.reduce((sum, i) => sum + i.qty, 0);
   const lowStockItems = inventoryWithStatus.filter(
     (i) => i.status === "low" || i.status === "out"
@@ -120,7 +120,7 @@ export async function loadDashboardData() {
     .map((r) => ({
       when: r.redeemed_at,
       type: "Redemption",
-      detail: r.reward_type || "Reward",
+      detail: r.reward_name || r.reward_type || "Reward",
       points: Number(r.points_used || 0),
       receiptId: r.voucher_id || "—",
       status: "completed",

@@ -40,7 +40,7 @@
 
       <div class="page-heading">
         <h1 class="kiosk-title">Enjoy your <em>meal!</em></h1>
-        <p class="kiosk-sub">Take your can from the tray below the screen.</p>
+        <p class="kiosk-sub" id="thanksSub">Take your item from the tray below the screen.</p>
       </div>
 
       <section class="kiosk-card thanks">
@@ -64,10 +64,19 @@
     (function () {
       // the reward is collected, so nothing from this visit should carry
       // over to whoever walks up next
+      var rewardName = sessionStorage.getItem("dispenseName");
+      if (rewardName) {
+        document.getElementById("thanksSub").textContent =
+          "Take your " + rewardName + " from the tray below the screen.";
+      }
+
       sessionStorage.removeItem("voucherID");
       sessionStorage.removeItem("returnVoucherID");
       sessionStorage.removeItem("totalPoints");
       sessionStorage.removeItem("sessionItems");
+      sessionStorage.removeItem("dispenseName");
+      sessionStorage.removeItem("dispenseSku");
+      sessionStorage.removeItem("dispenseCoil");
 
       var label = document.getElementById("countdown");
       var left  = 5;

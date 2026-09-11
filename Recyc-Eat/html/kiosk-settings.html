@@ -107,30 +107,12 @@
             <div class="card-body">
               <div class="setting-row">
                 <div class="setting-copy">
-                  <h3>Redemption threshold</h3>
-                  <p>Minimum points required on a receipt before a full meal reward can be redeemed.</p>
+                  <h3>Reward picker unlock</h3>
+                  <p>FINISH offers the 4-coil picker once the shopper reaches this many points, or the cheapest coil cost — whichever is lower. Each coil still has its own price below.</p>
                 </div>
                 <div class="setting-control">
                   <input class="input" type="number" min="1" id="redemptionThreshold" required />
-                  <div class="hint">Matches kiosk meal unlock</div>
-                </div>
-              </div>
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <h3>Minimum redemption</h3>
-                  <p>Lowest points that can be spent in a single redemption.</p>
-                </div>
-                <div class="setting-control">
-                  <input class="input" type="number" min="1" id="minRedemption" required />
-                </div>
-              </div>
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <h3>Maximum redemption</h3>
-                  <p>Caps how many points can be redeemed at once.</p>
-                </div>
-                <div class="setting-control">
-                  <input class="input" type="number" min="1" id="maxRedemption" required />
+                  <div class="hint">Default: 50. Spaghetti is 40, so 40 already unlocks the picker.</div>
                 </div>
               </div>
             </div>
@@ -139,36 +121,8 @@
           <section class="card settings-group">
             <div class="card-header"><h2>Reward point costs</h2></div>
             <div class="card-body">
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <h3>Canned meal</h3>
-                  <p>Points required to redeem a canned meal. The kiosk uses this same number as the unlock threshold.</p>
-                </div>
-                <div class="setting-control">
-                  <input class="input" type="number" min="1" id="rewardMealPoints" required />
-                </div>
-              </div>
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <h3>Snack pack</h3>
-                  <p>Points required for a smaller snack reward.</p>
-                </div>
-                <div class="setting-control">
-                  <input class="input" type="number" min="1" id="rewardSnackPoints" required />
-                  <div class="hint">Saved, but the kiosk currently dispenses canned food only.</div>
-                </div>
-              </div>
-              <div class="setting-row">
-                <div class="setting-copy">
-                  <h3>Available rewards</h3>
-                  <p>Reward items currently offered at this kiosk (one per line).</p>
-                </div>
-                <div class="setting-control">
-                  <textarea class="textarea" id="availableRewards" rows="4">Tuna
-Sardines</textarea>
-                  <div class="hint">One reward per line. The kiosk dispenses canned food from this list.</div>
-                </div>
-              </div>
+              <p class="settings-coil-lead">Coils 1–4 match the kiosk buttons and the vending motors. Names and costs here are what shoppers see on Redeem.</p>
+              <div id="coilRewardFields"></div>
             </div>
           </section>
 
@@ -197,7 +151,7 @@ Sardines</textarea>
                     <input type="checkbox" id="autoPrint" />
                     <span></span>
                   </label>
-                  <div class="hint">Stored for when a printer is attached.</div>
+                  <div class="hint">Needs the local print server running on port 4000.</div>
                 </div>
               </div>
               <div class="setting-row">
@@ -237,21 +191,55 @@ Sardines</textarea>
       loadKioskSettings,
       saveKioskSettings,
     } from "../js/kiosk-settings-data.js";
+    import {
+      DEFAULT_COILS,
+      loadCoilInventory,
+      saveCoilCatalog,
+    } from "../js/food-inventory-data.js";
 
     const fields = [
       "pointsSmallBottle",
       "pointsBigBottle",
       "pointsCan",
       "redemptionThreshold",
-      "minRedemption",
-      "maxRedemption",
-      "rewardMealPoints",
-      "rewardSnackPoints",
       "sessionTimeout",
       "lowStockAlert",
     ];
 
     const toggles = ["kioskOpen", "autoPrint"];
+    let coils = DEFAULT_COILS.map((item) => ({ ...item }));
+
+    function coilFields() {
+      return document.getElementById("coilRewardFields");
+    }
+
+    function renderCoils(rows) {
+      coils = rows;
+      coilFields().innerHTML = rows.map((item) => `
+        <div class="setting-row coil-reward-row">
+          <div class="setting-copy">
+            <h3>Coil ${item.coilNumber}</h3>
+            <p>Kiosk button ${item.coilNumber} · ${item.sku || ""}</p>
+          </div>
+          <div class="setting-control coil-reward-controls">
+            <label class="sr-only" for="coilName${item.coilNumber}">Name</label>
+            <input class="input" id="coilName${item.coilNumber}" value="${String(item.name || "").replace(/"/g, "&quot;")}" required />
+            <label class="sr-only" for="coilCost${item.coilNumber}">Point cost</label>
+            <input class="input" type="number" min="1" id="coilCost${item.coilNumber}" value="${item.pointCost}" required />
+            <div class="hint">Name and points to redeem</div>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    function readCoils() {
+      return coils.map((item) => ({
+        coilNumber: item.coilNumber,
+        sku: item.sku,
+        name: document.getElementById(`coilName${item.coilNumber}`).value.trim(),
+        pointCost: Number(document.getElementById(`coilCost${item.coilNumber}`).value),
+      }));
+    }
 
     function fillForm(data) {
       fields.forEach((id) => {
@@ -260,7 +248,6 @@ Sardines</textarea>
       toggles.forEach((id) => {
         document.getElementById(id).checked = Boolean(data[id]);
       });
-      document.getElementById("availableRewards").value = data.availableRewards;
     }
 
     function readForm() {
@@ -271,8 +258,12 @@ Sardines</textarea>
       toggles.forEach((id) => {
         data[id] = document.getElementById(id).checked;
       });
-      data.availableRewards = document.getElementById("availableRewards").value.trim();
-      return data;
+      const catalog = readCoils();
+      const costs = catalog.map((item) => item.pointCost).filter((n) => n > 0);
+      data.availableRewards = catalog.map((item) => item.name).join("\n");
+      data.rewardMealPoints = costs.length ? Math.min(...costs) : 50;
+      data.rewardSnackPoints = data.rewardMealPoints;
+      return { data, catalog };
     }
 
     const saveBtn  = document.querySelector('#settingsForm button[type="submit"]');
@@ -287,9 +278,21 @@ Sardines</textarea>
         AdminUI.toast("Couldn't load saved settings", "Showing defaults. Check your connection.", "error");
       }
 
+      try {
+        renderCoils(await loadCoilInventory());
+      } catch (err) {
+        console.error("Failed to load coil rewards:", err);
+        renderCoils(DEFAULT_COILS);
+        AdminUI.toast("Couldn't load rewards", "Showing default coil names. Save after the connection is back.", "error");
+      }
+
       document.getElementById("settingsForm").addEventListener("submit", async (e) => {
         e.preventDefault();
-        const data = readForm();
+        const { data, catalog } = readForm();
+        if (catalog.some((item) => !item.name || item.pointCost < 1)) {
+          AdminUI.toast("Check the values", "Every coil needs a name and a point cost of at least 1.", "error");
+          return;
+        }
         const problem = validateSettings(data);
         if (problem) {
           AdminUI.toast("Check the values", problem, "error");
@@ -298,6 +301,7 @@ Sardines</textarea>
 
         saveBtn.disabled = true;
         try {
+          await saveCoilCatalog(catalog);
           await saveKioskSettings(data);
         } catch (err) {
           console.error("Failed to save settings:", err);
@@ -306,11 +310,13 @@ Sardines</textarea>
           return;
         }
         saveBtn.disabled = false;
-        AdminUI.toast("Settings saved", "The kiosk will use these values on the next screen.");
+        coils = catalog;
+        AdminUI.toast("Settings saved", "The kiosk will use these coil names and costs on the next screen.");
       });
 
       resetBtn.addEventListener("click", () => {
         fillForm(DEFAULT_SETTINGS);
+        renderCoils(DEFAULT_COILS.map((item) => ({ ...item })));
         AdminUI.toast("Defaults restored", "Review the values, then click Save Changes to apply them.");
       });
     });

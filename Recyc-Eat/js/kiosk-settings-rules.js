@@ -9,7 +9,7 @@ export const DEFAULT_SETTINGS = {
   maxRedemption: 150,
   rewardMealPoints: 50,
   rewardSnackPoints: 30,
-  availableRewards: "Tuna\nSardines",
+  availableRewards: "Spaghetti pack\nCanned sardines\nCanned tuna\nCorned beef",
   kioskOpen: true,
   autoPrint: true,
   sessionTimeout: 90,

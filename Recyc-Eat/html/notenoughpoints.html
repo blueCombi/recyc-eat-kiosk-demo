@@ -58,7 +58,7 @@
         </div>
         <p class="goal-caption">
           <img src="../images/image 32.png" alt="" class="goal-icon" aria-hidden="true">
-          <span><strong id="rewardNeed">50</strong> points = 1 free canned meal</span>
+          <span><strong id="rewardNeed">50</strong> points = pick a food reward</span>
         </p>
       </div>
 
@@ -85,11 +85,18 @@
   <script type="module">
     import { POINTS } from "../js/firebase-config.js";
     import { loadKioskSettings, applySettingsToPoints } from "../js/kiosk-settings-data.js";
+    import { getMinRewardCost } from "../js/food-inventory-data.js";
 
     try {
       applySettingsToPoints(POINTS, await loadKioskSettings());
     } catch (err) {
       console.error("Using default point values:", err);
+    }
+    try {
+      const minCost = await getMinRewardCost();
+      if (minCost > 0) POINTS.threshold = Math.min(POINTS.threshold, minCost);
+    } catch (err) {
+      console.error("Using settings threshold:", err);
     }
 
     const REWARD_POINTS = POINTS.threshold;

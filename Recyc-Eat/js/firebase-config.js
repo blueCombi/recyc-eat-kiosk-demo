@@ -152,11 +152,11 @@ export async function ensureVoucherMatchesSession(voucherID, sessionTotal, sessi
 }
 
 // ─── Redeem food reward ──────────────────────────────────────────
-// Marks the voucher redeemed and subtracts 1 from the loaded inventory
-// item. Fails (without dispensing) when that item is missing or at 0.
-export async function redeemReward(voucherID, rewardType) {
-  const { consumeLoadedReward } = await import("./food-inventory-data.js");
-  return consumeLoadedReward(voucherID, rewardType);
+// Marks the voucher redeemed and subtracts 1 from the chosen coil SKU.
+// Fails when that SKU is out of stock or the receipt is short of its cost.
+export async function redeemReward(voucherID, sku) {
+  const { consumeReward } = await import("./food-inventory-data.js");
+  return consumeReward(voucherID, sku);
 }
 
 export { db, auth, authReady };  

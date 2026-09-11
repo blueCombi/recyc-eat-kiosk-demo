@@ -61,7 +61,7 @@
         <div class="page-header">
           <div>
             <h1>Food Inventory</h1>
-            <p>Live stock in the machine. Restock here, and mark which can is loaded for the kiosk. Low stock uses the threshold in Kiosk Settings (or 20% of capacity). Out of stock is 0 — the kiosk will not redeem that item.</p>
+            <p>Live stock for coils 1–4. Button 1 on the kiosk is always coil 1. Low stock uses the threshold in Kiosk Settings (or 20% of capacity). Out of stock is 0 — that coil’s button is disabled.</p>
           </div>
           <div class="page-actions">
             <button class="btn btn-primary" type="button" id="addItemBtn">+ Add item</button>
@@ -115,9 +115,9 @@
                   <tr>
                     <th>Item</th>
                     <th>SKU</th>
-                    <th>Level</th>
+                    <th>Coil</th>
+                    <th>Cost</th>
                     <th>Status</th>
-                    <th>Kiosk</th>
                     <th>Updated</th>
                     <th></th>
                   </tr>
@@ -167,16 +167,26 @@
         </div>
         <div class="inventory-form-grid">
           <div class="field">
+            <label for="itemCoil">Coil (1–4)</label>
+            <input class="input" type="number" min="1" max="4" id="itemCoil" required />
+          </div>
+          <div class="field">
+            <label for="itemCost">Point cost</label>
+            <input class="input" type="number" min="1" id="itemCost" required />
+          </div>
+          <div class="field">
+            <label for="itemUnit">Unit</label>
+            <input class="input" id="itemUnit" placeholder="cans" required />
+          </div>
+        </div>
+        <div class="inventory-form-grid">
+          <div class="field">
             <label for="itemQty">Quantity</label>
             <input class="input" type="number" min="0" id="itemQty" required />
           </div>
           <div class="field">
             <label for="itemCapacity">Capacity</label>
             <input class="input" type="number" min="1" id="itemCapacity" required />
-          </div>
-          <div class="field">
-            <label for="itemUnit">Unit</label>
-            <input class="input" id="itemUnit" placeholder="cans" required />
           </div>
         </div>
       </form>
@@ -233,7 +243,6 @@
       saveItem,
       restockItem,
       deleteItem,
-      setLoadedItem,
     } from "../js/food-inventory-data.js";
 
     let items = [];
@@ -261,11 +270,11 @@
       outTrend.className = "stat-card__trend " + (outCount ? "trend-down" : "trend-flat");
       AdminUI.refreshStockAlert(items);
 
-      const emptyLoaded = items.find((i) => i.loaded && i.status === "out");
-      if (emptyLoaded) {
+      const emptyCoils = items.filter((i) => i.status === "out" && i.coilNumber);
+      if (emptyCoils.length) {
         AdminUI.toast(
           "Out of stock",
-          `${emptyLoaded.name} is empty. The kiosk will not redeem until you restock.`,
+          `${emptyCoils.map((i) => `Coil ${i.coilNumber} (${i.name})`).join(", ")} ${emptyCoils.length === 1 ? "is" : "are"} empty. That button is disabled on the kiosk.`,
           "error",
         );
       }
@@ -277,9 +286,6 @@
         body.innerHTML = items.map((item) => {
           const pct = Math.min(100, Math.round((item.qty / item.capacity) * 100));
           const barClass = item.status === "out" ? "is-out" : item.status === "low" ? "is-low" : "";
-          const loaded = item.loaded
-            ? `<span class="badge badge-info">Loaded now</span>`
-            : `<button class="btn btn-ghost btn-sm" type="button" data-load="${item.id}">Load in kiosk</button>`;
           return `<tr>
             <td>
               <strong>${AdminUI.escapeHtml(item.name)}</strong>
@@ -289,9 +295,9 @@
               </div>
             </td>
             <td>${AdminUI.escapeHtml(item.sku)}</td>
-            <td class="num">${item.qty}</td>
+            <td class="num">${item.coilNumber || "—"}</td>
+            <td class="num">${item.pointCost}</td>
             <td>${statusBadge(item.status)}</td>
-            <td>${loaded}</td>
             <td>${item.updated ? AdminUI.formatDateTime(item.updated) : "—"}</td>
             <td>
               <div class="inventory-actions">
@@ -342,6 +348,8 @@
       document.getElementById("itemId").value = item.id;
       document.getElementById("itemName").value = item.name;
       document.getElementById("itemSku").value = item.sku;
+      document.getElementById("itemCoil").value = item.coilNumber || "";
+      document.getElementById("itemCost").value = item.pointCost;
       document.getElementById("itemQty").value = item.qty;
       document.getElementById("itemCapacity").value = item.capacity;
       document.getElementById("itemUnit").value = item.unit;
@@ -365,8 +373,7 @@
     document.addEventListener("DOMContentLoaded", async () => {
       document.getElementById("addItemBtn").addEventListener("click", openAdd);
       document.getElementById("addStockBtn")?.addEventListener("click", () => {
-        const target = items.find((i) => i.loaded && (i.status === "out" || i.status === "low"))
-          || items.find((i) => i.status === "out" || i.status === "low");
+        const target = items.find((i) => i.status === "out" || i.status === "low");
         if (target) openRestock(target.id);
         else openAdd();
       });
@@ -376,24 +383,14 @@
       });
 
       document.getElementById("inventoryBody").addEventListener("click", async (e) => {
-        const button = e.target.closest("[data-edit], [data-delete], [data-restock], [data-load]");
+        const button = e.target.closest("[data-edit], [data-delete], [data-restock]");
         if (!button) return;
         const editId = button.getAttribute("data-edit");
         const deleteId = button.getAttribute("data-delete");
         const restockId = button.getAttribute("data-restock");
-        const loadId = button.getAttribute("data-load");
 
         if (editId) openEdit(editId);
         if (restockId) openRestock(restockId);
-        if (loadId) {
-          try {
-            await setLoadedItem(loadId);
-            AdminUI.toast("Kiosk loaded", `${findItem(loadId)?.name || "Item"} will dispense on the next redemption.`);
-            await refresh();
-          } catch (err) {
-            AdminUI.toast("Couldn't load item", err.message, "error");
-          }
-        }
         if (deleteId) {
           pendingDeleteId = deleteId;
           const item = findItem(deleteId);
@@ -423,6 +420,8 @@
           id,
           name: document.getElementById("itemName").value.trim(),
           sku: document.getElementById("itemSku").value.trim(),
+          coilNumber: Number(document.getElementById("itemCoil").value),
+          pointCost: Number(document.getElementById("itemCost").value),
           qty: Number(document.getElementById("itemQty").value),
           capacity: Number(document.getElementById("itemCapacity").value),
           unit: document.getElementById("itemUnit").value.trim(),

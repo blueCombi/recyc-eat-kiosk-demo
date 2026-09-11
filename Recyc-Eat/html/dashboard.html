@@ -215,7 +215,7 @@
           return `
             <div style="margin-bottom:16px">
               <div class="inventory-meta">
-                <span>${AdminUI.escapeHtml(item.name || "Unnamed item")}</span>
+                <span>${item.coilNumber ? `Coil ${item.coilNumber} · ` : ""}${AdminUI.escapeHtml(item.name || "Unnamed item")}</span>
                 ${badge}
               </div>
               <div class="progress"><div class="progress__bar ${item.status === "out" ? "is-out" : "is-low"}" style="width:${pct}%"></div></div>

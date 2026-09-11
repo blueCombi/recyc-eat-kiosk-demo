@@ -61,14 +61,14 @@
       </button>
 
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
-        FINISH <span aria-hidden="true">&check;</span>
+        <span id="finishLabel">FINISH</span> <span aria-hidden="true">&check;</span>
       </button>
     </main>
   </div>
 
   <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span id="kioskHint">Tap the ring for each item you insert. Reach 50 points for a free meal.</span>
+    <span id="kioskHint">Tap the ring for each item you insert. Tap FINISH when you want to pick a reward.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -76,6 +76,7 @@
   <script type="module">
     import { POINTS, createVoucher, addPoints, scanVoucher } from '../js/firebase-config.js';
     import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
+    import { getMinRewardCost } from '../js/food-inventory-data.js';
 
     function itemCatalog() {
       return [
@@ -100,6 +101,7 @@
     const statusTitle = document.getElementById("acceptTitle");
     const ring      = document.getElementById("pointsRing");
     const finishBtn = document.getElementById("btnFinish");
+    const finishLabel = document.getElementById("finishLabel");
     const itemToggle= document.getElementById("itemToggle");
     const itemIcon  = document.getElementById("itemIcon");
     const itemBadge = document.getElementById("itemBadge");
@@ -126,7 +128,8 @@
       gainEl.textContent    = item.pts;
     }
 
-    // ── go to redeem if enough points ────────────────────────────
+    // Points keep counting until they tap FINISH. Do not jump to Redeem
+    // automatically — they may want a pricier coil.
     function goAfterWrites(url) {
       lastWrite.then(() => {
         window.location.href = url;
@@ -137,13 +140,9 @@
       });
     }
 
-    function checkRedeem(total) {
-      if (total < POINTS.threshold || redirecting) return;
-      redirecting = true;
-      sessionStorage.setItem("totalPoints", total);
-      // wait until the last insert is in Firestore, otherwise Redeem
-      // reads a receipt that is still 5–10 points short
-      goAfterWrites("redeemready.html");
+    function updateFinishLabel(total) {
+      if (!finishLabel) return;
+      finishLabel.textContent = total >= POINTS.threshold ? "FINISH & CHOOSE REWARD" : "FINISH";
     }
 
     // ── load initial state ────────────────────────────────────────
@@ -153,9 +152,15 @@
       } catch (err) {
         console.error("Using default point values:", err);
       }
+      try {
+        const minCost = await getMinRewardCost();
+        if (minCost > 0) POINTS.threshold = Math.min(POINTS.threshold, minCost);
+      } catch (err) {
+        console.error("Using settings threshold:", err);
+      }
       ITEM_TYPES = itemCatalog();
       document.getElementById("kioskHint").textContent =
-        `Tap the ring for each item you insert. Reach ${POINTS.threshold} points for a free meal.`;
+        `Tap the ring for each item. Tap FINISH when you want to pick a reward (from ${POINTS.threshold} points).`;
 
       // if returning user scanned a QR, load from Firebase
       const returnID = sessionStorage.getItem("returnVoucherID");
@@ -172,6 +177,7 @@
       }
 
       render(totalPoints, ITEM_TYPES[0].pts);
+      updateFinishLabel(totalPoints);
 
       // insert.html sends ?award=1 to mean "an item just went in". Drop the
       // parameter first so a page refresh cannot award it twice.
@@ -179,8 +185,6 @@
         history.replaceState(null, "", location.pathname);
         handleAddPoints();
       }
-
-      checkRedeem(totalPoints);
     }
 
     // Firestore writes run one at a time. Tapping faster than the network
@@ -210,6 +214,7 @@
 
       render(totalPoints, item.pts);
       announceAccepted();
+      updateFinishLabel(totalPoints);
       sessionStorage.setItem("totalPoints", totalPoints);
       // the receipt screen reads this back to list what was inserted
       sessionStorage.setItem("sessionItems", JSON.stringify(sessionItems));
@@ -224,8 +229,6 @@
           await addPoints(voucherID, [inserted], item.pts);
         }
       });
-
-      checkRedeem(totalPoints);
     }
 
     // ── events ────────────────────────────────────────────────────

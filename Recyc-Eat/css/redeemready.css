@@ -1,69 +1,96 @@
-/* Redeem ready — the reward is unlocked and waiting to dispense.
+/* Redeem ready — pick a coil, then dispense.
    Tokens, ring, buttons and background live in kiosk.css. */
 
 .redeem-title { color: var(--green-600); }
 .redeem-title.is-unavailable { color: var(--teal-700); }
 
-.redeem-print {
+.redeem-print,
+.redeem-keep {
   width: 100%;
   max-width: 420px;
 }
 
-/* points ring beside what the points buy */
 .redeem-row {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   justify-content: center;
   gap: clamp(var(--sp-4), 4vw, var(--sp-7));
   flex-wrap: wrap;
+  width: 100%;
 }
 
 .redeem-ring {
-  --ring: clamp(170px, 28vh, 240px);
-  --dot:  clamp(22px, 3.6vh, 32px);
+  --ring: clamp(150px, 24vh, 210px);
+  --dot:  clamp(18px, 3vh, 28px);
+  flex: 0 0 auto;
 }
 
-/* ── what you get ──────────────────────────────────────────── */
-.reward {
+.reward-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--sp-3);
+  flex: 1 1 560px;
+  min-width: min(100%, 560px);
+}
+
+.reward-tile {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: var(--sp-2);
-  padding: clamp(var(--sp-3), 2.4vh, var(--sp-5));
-  max-width: 300px;
+  align-items: flex-start;
+  gap: 4px;
+  min-height: 132px;
+  padding: var(--sp-3);
+  border: 2px solid var(--border);
+  border-radius: var(--r-md);
   background: var(--teal-050);
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
 }
 
-.reward__art {
-  width: clamp(88px, 14vh, 132px);
-  height: auto;
-}
-
-.reward__title {
-  margin: 0;
-  font-size: var(--text-lg);
+.reward-tile__coil {
+  font-size: var(--text-xs);
   font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--teal-700);
 }
 
-.reward__desc {
-  margin: 0;
-  font-size: var(--text-xs);
-  color: var(--muted);
-  line-height: 1.35;
+.reward-tile__name {
+  font-size: var(--text-sm);
+  font-weight: 800;
+  line-height: 1.2;
+  color: var(--teal-700);
 }
 
-.reward__cost {
-  margin: 0;
-  padding: 4px var(--sp-4);
-  border-radius: var(--r-pill);
-  background: var(--green-100);
-  font-size: var(--text-sm);
+.reward-tile__cost {
+  margin-top: auto;
+  font-size: var(--text-xs);
   font-weight: 700;
   color: var(--green-700);
 }
 
-/* ── actions ───────────────────────────────────────────────── */
+.reward-tile__note {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.reward-tile.is-selected {
+  border-color: var(--green-600);
+  background: var(--green-100);
+  box-shadow: var(--shadow-1);
+}
+
+.reward-tile.is-disabled,
+.reward-tile:disabled {
+  cursor: default;
+  opacity: 0.45;
+  filter: grayscale(0.35);
+  background: #f3f6f5;
+}
+
 .redeem-btn {
   width: 100%;
   max-width: 420px;
@@ -82,12 +109,17 @@
   color: var(--red-600);
 }
 
-/* ── narrow screens: stack ring above the reward ───────────── */
-@media (max-width: 720px) {
-  .redeem-row { gap: var(--sp-4); }
-  .reward { max-width: 100%; }
+@media (max-width: 960px) {
+  .reward-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
-@media (max-height: 760px) {
-  .reward__desc { display: none; }
+@media (max-width: 720px) {
+  .redeem-row { gap: var(--sp-4); }
+  .reward-grid {
+    grid-template-columns: 1fr;
+    min-width: 0;
+  }
+  .reward-tile { min-height: 88px; }
 }

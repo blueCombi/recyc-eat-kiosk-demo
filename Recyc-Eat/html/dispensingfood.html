@@ -33,7 +33,7 @@
 
       <div class="page-heading">
         <h1 class="kiosk-title">Dispensing your <em>reward</em></h1>
-        <p class="kiosk-sub">Your canned meal is on its way.</p>
+        <p class="kiosk-sub" id="dispenseSub">Your item is on its way from the machine.</p>
       </div>
 
       <div class="dispenser" aria-hidden="true">
@@ -45,7 +45,7 @@
         <div class="dispenser__window">
           <span class="dispenser__can">
             <span class="dispenser__can-lid"></span>
-            <span class="dispenser__can-label">CANNED<br>FOOD</span>
+            <span class="dispenser__can-label" id="dispenseLabel">REWARD</span>
           </span>
         </div>
 
@@ -55,7 +55,7 @@
       </div>
 
       <div class="dispense-status">
-        <p class="dispense-status__text" role="status" aria-live="polite">Releasing your can...</p>
+        <p class="dispense-status__text" id="dispenseStatus" role="status" aria-live="polite">Releasing your item...</p>
         <div class="dispense-progress" aria-hidden="true">
           <div class="dispense-progress__fill"></div>
         </div>
@@ -65,13 +65,43 @@
 
   <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span>Collect your can from the tray below the screen.</span>
+    <span>Collect your item from the tray below the screen.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
-  <script>
-    // keep in step with the --dispense-ms duration in dispensingfood.css
+  <script type="module">
+    const name = (sessionStorage.getItem("dispenseName") || "reward").trim();
+    const coil = Number(sessionStorage.getItem("dispenseCoil") || 0);
+    const label = document.getElementById("dispenseLabel");
+    const sub = document.getElementById("dispenseSub");
+    const status = document.getElementById("dispenseStatus");
+
+    const shortName = name.replace(/\s+/g, " ");
+    label.textContent = shortName.toUpperCase();
+    if (coil >= 1 && coil <= 4) {
+      sub.textContent = `${shortName} is coming from coil ${coil}.`;
+      status.textContent = `Releasing coil ${coil}...`;
+    } else {
+      sub.textContent = `${shortName} is on its way.`;
+    }
+
+    // When the ESP32 is on the LAN, POST the coil so the matching motor turns.
+    // Leave ESP32_DISPENSE_URL empty until that board is wired up.
+    const ESP32_DISPENSE_URL = "";
+    async function requestDispense(coilNumber) {
+      if (!ESP32_DISPENSE_URL || !coilNumber) return;
+      await fetch(ESP32_DISPENSE_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ coilNumber }),
+      });
+    }
+
+    requestDispense(coil).catch((err) => {
+      console.warn("ESP32 dispense skipped:", err.message);
+    });
+
     setTimeout(function () {
       window.location.href = "foodrewardready.html";
     }, 4000);

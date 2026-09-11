@@ -7,7 +7,7 @@ import {
   getDocs,
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// reward_type is a machine key ("canned_food"), so make it presentable
+// reward_type is the SKU (or an older "canned_food" key); prefer reward_name
 // without needing a lookup table for every reward added later
 function rewardLabel(type) {
   const key = String(type || "").trim();
