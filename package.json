@@ -8,6 +8,9 @@
     "escpos": "^3.0.0-alpha.6",
     "escpos-usb": "^3.0.0-alpha.4",
     "express": "^5.2.1",
-    "firebase": "^12.18.0"
+    "firebase": "^12.18.0",
+    "node-hid": "^3.4.0",
+    "serialport": "^13.0.0",
+    "ws": "^8.21.3"
   }
 }

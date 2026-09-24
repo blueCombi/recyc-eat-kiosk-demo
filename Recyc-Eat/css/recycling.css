@@ -62,6 +62,57 @@
 
 .start-actions .kiosk-btn { width: 100%; }
 
+.stock-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  width: min(480px, 100%);
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--r-md);
+  border: 2px solid #f0c36a;
+  background: #fff8e8;
+  text-align: left;
+}
+
+.stock-notice[hidden] {
+  display: none;
+}
+
+.stock-notice--critical {
+  border-color: #e58b8b;
+  background: #fff1f1;
+}
+
+.stock-notice__icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-weight: 800;
+  color: #fff;
+  background: #d97706;
+}
+
+.stock-notice--critical .stock-notice__icon {
+  background: #dc2626;
+}
+
+.stock-notice__title {
+  display: block;
+  margin-bottom: 2px;
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.stock-notice__text {
+  margin: 0;
+  font-size: var(--text-xs);
+  line-height: 1.4;
+  color: var(--muted);
+}
+
 .qr-icon {
   height: 26px;
   width: auto;

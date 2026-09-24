@@ -32,14 +32,16 @@
       </ol>
 
       <div class="scan-intro">
-        <div class="scanner" role="status" aria-live="polite">
+        <div class="scanner" id="scanner" role="status" aria-live="polite">
           <div class="scanner__frame">
+            <video id="scanVideo" class="scanner__video" playsinline muted autoplay hidden></video>
+            <canvas id="scanCanvas" class="scanner__canvas" hidden></canvas>
             <span class="scanner__corner scanner__corner--tl" aria-hidden="true"></span>
             <span class="scanner__corner scanner__corner--tr" aria-hidden="true"></span>
             <span class="scanner__corner scanner__corner--bl" aria-hidden="true"></span>
             <span class="scanner__corner scanner__corner--br" aria-hidden="true"></span>
             <span class="scanner__beam" aria-hidden="true"></span>
-            <svg viewBox="0 0 120 120" class="scanner__qr" role="img" aria-label="QR code">
+            <svg id="scanPlaceholder" viewBox="0 0 120 120" class="scanner__qr" role="img" aria-label="QR code">
               <g fill="currentColor">
                 <rect x="18" y="18" width="18" height="18"/>
                 <rect x="18" y="54" width="18" height="18"/>
@@ -56,13 +58,13 @@
             </svg>
           </div>
           <p class="scanner__status" id="statusText">
-            Waiting to scan<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
+            Starting camera<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
           </p>
         </div>
 
         <div class="page-heading">
           <h1 class="kiosk-title">Scan your <em>QR receipt</em></h1>
-          <p class="kiosk-sub">Continue where you left off and keep collecting points.</p>
+          <p class="kiosk-sub">Hold the printed QR up to the camera. USB scanners still work if Windows sees them as a keyboard.</p>
         </div>
       </div>
 
@@ -81,7 +83,7 @@
               </span>
               <span class="how-text">
                 <strong>Present your receipt</strong>
-                <span>Hold the QR code up to the scanner.</span>
+                <span>Hold the QR code up to the camera frame.</span>
               </span>
             </li>
             <li>
@@ -93,7 +95,7 @@
               </span>
               <span class="how-text">
                 <strong>Line it up</strong>
-                <span>Keep the code inside the frame above.</span>
+                <span>Keep the code steady inside the frame.</span>
               </span>
             </li>
             <li>
@@ -105,7 +107,7 @@
                 </svg>
               </span>
               <span class="how-text">
-                <strong>Wait for the beep</strong>
+                <strong>Wait for the load</strong>
                 <span>Your points load automatically.</span>
               </span>
             </li>
@@ -143,32 +145,80 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { scanVoucher } from '../js/firebase-config.js';
 
     const DOTS = '<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
+    // USB 2D scanners type like a keyboard (HID wedge). Characters arrive in a
+    // burst, then Enter. Ignore slow typing so staff can still use the manual box.
+    const SCAN_GAP_MS = 80;
+    const RECEIPT_RE = /EM-\d{8}-\d{4}-\d{3}/i;
 
     const statusText = document.getElementById("statusText");
     const errorText  = document.getElementById("errorText");
     const input      = document.getElementById("manualID");
     const button     = document.getElementById("manualBtn");
+    const scannerEl  = document.getElementById("scanner");
+    const video      = document.getElementById("scanVideo");
+    const canvas     = document.getElementById("scanCanvas");
+    const placeholder = document.getElementById("scanPlaceholder");
+    const ctx        = canvas.getContext("2d", { willReadFrequently: true });
 
     let loading = false;
+    let scanBuffer = "";
+    let lastKeyAt = 0;
+    let cameraStream = null;
+    let rafId = 0;
+    let barcodeDetector = null;
 
     function showError(message) {
       errorText.textContent = message;
       errorText.hidden = false;
     }
 
+    // Printed QR is the receipt ID; if a URL ever gets encoded, pull EM-… out of it.
+    function extractVoucherID(raw) {
+      const text = String(raw || "").trim();
+      if (!text) return "";
+      const match = text.match(RECEIPT_RE);
+      if (match) return match[0].toUpperCase();
+      try {
+        const url = new URL(text);
+        const fromQuery = url.searchParams.get("id") || url.searchParams.get("voucher");
+        if (fromQuery) return extractVoucherID(fromQuery);
+        const pathTail = url.pathname.split("/").filter(Boolean).pop();
+        if (pathTail) return extractVoucherID(pathTail);
+      } catch {
+        // not a URL — fall through
+      }
+      return text.toUpperCase();
+    }
+
+    function stopCamera() {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      if (cameraStream) {
+        cameraStream.getTracks().forEach((track) => track.stop());
+        cameraStream = null;
+      }
+      video.hidden = true;
+      placeholder.hidden = false;
+      scannerEl.classList.remove("scanner--live");
+    }
+
     async function loadVoucher(rawID) {
-      const voucherID = rawID.trim().toUpperCase();
+      const voucherID = extractVoucherID(rawID);
       if (!voucherID || loading) return;
 
       loading = true;
       button.disabled = true;
       errorText.hidden = true;
       statusText.innerHTML = "Loading your points" + DOTS;
+      stopCamera();
 
       try {
         const result = await scanVoucher(voucherID);
@@ -183,20 +233,190 @@
 
         showError(result.message);
         statusText.textContent = "Scan failed. Please try again.";
+        startCamera();
       } catch (err) {
         showError("Can't reach the server. Ask a staff member for help.");
         statusText.textContent = "Scan failed. Please try again.";
+        startCamera();
       }
 
       loading = false;
       button.disabled = false;
     }
 
+    function flushScanBuffer() {
+      const payload = scanBuffer;
+      scanBuffer = "";
+      if (payload.length >= 6) loadVoucher(payload);
+    }
+
+    async function detectFromFrame() {
+      if (loading || video.readyState < 2) return null;
+
+      const w = video.videoWidth;
+      const h = video.videoHeight;
+      if (!w || !h) return null;
+
+      canvas.width = w;
+      canvas.height = h;
+      ctx.drawImage(video, 0, 0, w, h);
+
+      if (barcodeDetector) {
+        try {
+          const codes = await barcodeDetector.detect(canvas);
+          if (codes.length && codes[0].rawValue) return codes[0].rawValue;
+        } catch {
+          // fall through to jsQR
+        }
+      }
+
+      if (typeof jsQR === "function") {
+        const image = ctx.getImageData(0, 0, w, h);
+        const result = jsQR(image.data, image.width, image.height, {
+          inversionAttempts: "dontInvert",
+        });
+        if (result?.data) return result.data;
+      }
+
+      return null;
+    }
+
+    async function tick() {
+      if (loading || !cameraStream) return;
+      try {
+        const value = await detectFromFrame();
+        if (value) {
+          statusText.textContent = "QR found!";
+          await loadVoucher(value);
+          return;
+        }
+      } catch (err) {
+        console.warn("Camera decode error:", err);
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    async function startCamera() {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        statusText.textContent = "Camera unavailable — type the receipt ID below.";
+        return;
+      }
+
+      // Camera needs http://localhost (or https). file:// is blocked by the browser.
+      if (!window.isSecureContext && location.protocol !== "https:") {
+        statusText.textContent = "Open via the print server to use the camera, or type the ID.";
+        showError("Use http://localhost:4000/html/qrscan.html (run npm run print-server).");
+        return;
+      }
+
+      try {
+        if ("BarcodeDetector" in window) {
+          const formats = await BarcodeDetector.getSupportedFormats?.() || ["qr_code"];
+          if (formats.includes("qr_code")) {
+            barcodeDetector = new BarcodeDetector({ formats: ["qr_code"] });
+          }
+        }
+      } catch {
+        barcodeDetector = null;
+      }
+
+      try {
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+        video.srcObject = cameraStream;
+        video.hidden = false;
+        placeholder.hidden = true;
+        scannerEl.classList.add("scanner--live");
+        await video.play();
+        statusText.innerHTML = "Hold QR to the camera" + DOTS;
+        rafId = requestAnimationFrame(tick);
+      } catch (err) {
+        console.error(err);
+        statusText.textContent = "Camera blocked — allow access, or type the receipt ID.";
+        showError("Allow camera permission for this page, then refresh.");
+      }
+    }
+
+    // Listen on the page so a USB keyboard-wedge scanner still works if Windows sees it.
+    document.addEventListener("keydown", (event) => {
+      if (loading) return;
+
+      const typingInManual = document.activeElement === input;
+      const now = Date.now();
+      const gap = now - lastKeyAt;
+      lastKeyAt = now;
+
+      if (event.key === "Enter") {
+        if (!typingInManual && scanBuffer) {
+          event.preventDefault();
+          flushScanBuffer();
+        }
+        return;
+      }
+
+      if (event.key.length !== 1 || event.ctrlKey || event.metaKey || event.altKey) {
+        return;
+      }
+
+      if (typingInManual && gap > SCAN_GAP_MS && scanBuffer.length === 0) {
+        return;
+      }
+
+      if (!typingInManual && gap > SCAN_GAP_MS) {
+        scanBuffer = "";
+      }
+
+      scanBuffer += event.key;
+    });
+
     button.addEventListener("click", () => loadVoucher(input.value));
 
     input.addEventListener("keydown", (event) => {
-      if (event.key === "Enter") loadVoucher(input.value);
+      if (event.key === "Enter") {
+        if (scanBuffer.length >= 6) {
+          event.preventDefault();
+          flushScanBuffer();
+          return;
+        }
+        loadVoucher(input.value);
+      }
     });
+
+    // Hardware scanner bridge (USB Virtual Com / HID) from the local print server.
+    function connectScannerBridge() {
+      let ws;
+      try {
+        ws = new WebSocket(`ws://${location.host}/ws/scanner`);
+      } catch {
+        return;
+      }
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === "scan" && msg.text) {
+            statusText.textContent = "Hardware scanner read!";
+            loadVoucher(msg.text);
+          } else if (msg.type === "status" && (msg.mode === "serial" || msg.mode === "hid")) {
+            if (!cameraStream) {
+              statusText.innerHTML = "USB scanner ready — scan your receipt" + DOTS;
+            }
+          }
+        } catch {
+          /* ignore */
+        }
+      };
+      ws.onclose = () => setTimeout(connectScannerBridge, 2000);
+    }
+
+    window.addEventListener("pagehide", stopCamera);
+    connectScannerBridge();
+    startCamera();
   </script>
 </body>
 </html>

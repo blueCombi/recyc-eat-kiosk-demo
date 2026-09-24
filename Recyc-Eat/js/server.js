@@ -1,19 +1,28 @@
 /**
  * server.js
- * Local bridge from the kiosk page to the USB thermal printer.
+ * Local kiosk host + USB thermal printer + 2D scanner bridge.
  *
  * From the project root:
- *   node Recyc-Eat/js/server.js
+ *   npm run print-server
  *
- * The print screen POSTs to http://localhost:4000/api/print
+ * Then open:
+ *   http://localhost:4000/html/recycling.html
+ * Scanner setup:
+ *   http://localhost:4000/html/scanner-setup.html
  */
+const path = require("path");
+const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const { printVoucher } = require("./print-voucher");
+const { createScannerBridge } = require("./scanner-bridge");
 
 const app = express();
+const ROOT = path.join(__dirname, "..");
+
 app.use(cors());
 app.use(express.json());
+app.use(express.static(ROOT));
 
 function asNumber(value, fallback = 0) {
   const n = Number(value);
@@ -22,6 +31,10 @@ function asNumber(value, fallback = 0) {
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "econova-print" });
+});
+
+app.get("/api/scanner/status", (_req, res) => {
+  res.json(scanner.getStatus());
 });
 
 app.post("/api/print", async (req, res) => {
@@ -56,7 +69,12 @@ app.post("/api/print", async (req, res) => {
 });
 
 const PORT = 4000;
-app.listen(PORT, () => {
-  console.log(`Print server running at http://localhost:${PORT}`);
-  console.log("Kiosk print screen POSTs to /api/print");
+const server = http.createServer(app);
+const scanner = createScannerBridge({ server });
+
+server.listen(PORT, () => {
+  console.log(`Kiosk + print + scanner bridge at http://localhost:${PORT}`);
+  console.log(`Kiosk:  http://localhost:${PORT}/html/recycling.html`);
+  console.log(`Setup:  http://localhost:${PORT}/html/scanner-setup.html`);
+  console.log(`Scan:   http://localhost:${PORT}/html/qrscan.html`);
 });

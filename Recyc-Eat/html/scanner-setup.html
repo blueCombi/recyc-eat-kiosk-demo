@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>2D Scanner Setup — EcoNova</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="../css/kiosk.css">
+  <style>
+    .setup {
+      max-width: 920px;
+      margin: 0 auto;
+      text-align: left;
+      display: grid;
+      gap: var(--sp-4);
+    }
+    .status-box {
+      padding: var(--sp-4);
+      border-radius: var(--r-md);
+      border: 2px solid var(--border);
+      background: var(--surface);
+    }
+    .status-box.is-ok { border-color: var(--green-600); background: #f0faf4; }
+    .status-box.is-wait { border-color: var(--teal-500); background: var(--teal-050); }
+    .status-box.is-bad { border-color: var(--red-600); background: #fff5f5; }
+    .status-box h2 { margin: 0 0 var(--sp-2); font-size: var(--text-lg); color: var(--teal-700); }
+    .status-box p { margin: 0; color: var(--muted); }
+    .steps { margin: 0; padding-left: 1.2rem; color: var(--ink); }
+    .steps li { margin-bottom: var(--sp-2); }
+    .qr-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: var(--sp-3);
+    }
+    .qr-card {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: var(--sp-3);
+      text-align: center;
+    }
+    .qr-card h3 {
+      margin: 0 0 var(--sp-2);
+      font-size: var(--text-sm);
+      color: var(--teal-700);
+    }
+    .qr-card .hint {
+      margin: var(--sp-2) 0 0;
+      font-size: 11px;
+      color: var(--muted);
+      word-break: break-all;
+    }
+    .qr-card .target { min-height: 140px; display: grid; place-items: center; }
+    .last-scan {
+      font-family: ui-monospace, Consolas, monospace;
+      font-weight: 700;
+      color: var(--teal-700);
+    }
+  </style>
+</head>
+<body>
+  <div class="leaf-layer" aria-hidden="true">
+    <span class="leaf leaf-1"></span>
+    <span class="leaf leaf-2"></span>
+    <span class="leaf leaf-3"></span>
+  </div>
+  <div class="kiosk-backdrop" aria-hidden="true"></div>
+
+  <div class="kiosk-shell kiosk-shell--wide">
+    <header class="kiosk-header">
+      <img src="../images/logo.png" alt="EcoNova" class="kiosk-logo" />
+    </header>
+
+    <main class="kiosk-main">
+      <div class="setup">
+        <div>
+          <h1 class="kiosk-title">2D scanner setup</h1>
+          <p class="kiosk-sub">Force keyboard / serial mode, then confirm Windows is receiving scans.</p>
+        </div>
+
+        <div class="status-box is-wait" id="statusBox">
+          <h2 id="statusTitle">Checking bridge…</h2>
+          <p id="statusDetail">Connecting to local scanner service.</p>
+          <p class="last-scan" id="lastScan" hidden></p>
+        </div>
+
+        <section class="kiosk-card" style="padding: var(--sp-4);">
+          <h2 class="panel-title" style="margin-top:0">Do this in order</h2>
+          <ol class="steps">
+            <li>Plug the scanner <strong>USB</strong> into the PC. If it has a round DC jack, also plug a <strong>5V power adapter</strong> there (leave RS232 unplugged).</li>
+            <li>Aim at each QR below and trigger a scan (wait for beep). Config codes are accepted even when Notepad stays blank.</li>
+            <li>Unplug USB for 5 seconds, plug back in.</li>
+            <li>Open Notepad and scan a product barcode or receipt QR. Text should appear — or this page’s status turns green.</li>
+            <li>Then open <a href="qrscan.html">Scan QR Receipt</a>.</li>
+          </ol>
+        </section>
+
+        <section class="kiosk-card" style="padding: var(--sp-4);">
+          <h2 class="panel-title" style="margin-top:0">Programming codes</h2>
+          <p class="kiosk-sub" style="margin-bottom: var(--sp-3)">Scan top → bottom. If one does nothing, try the next variant.</p>
+          <div class="qr-grid" id="qrGrid"></div>
+        </section>
+
+        <a class="kiosk-btn kiosk-btn--primary" href="qrscan.html">Go to QR scan page</a>
+        <a class="kiosk-btn kiosk-btn--ghost" href="recycling.html">Back</a>
+      </div>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    const CODES = [
+      { title: "1. Factory default", payload: "%#F$", note: "Netum / XL style reset" },
+      { title: "1b. Factory alt", payload: "$%setdefault", note: "Alternate OEM reset" },
+      { title: "2. USB HID-KBW", payload: "%#IFSO$2", note: "Keyboard mode (needed for Notepad)" },
+      { title: "2b. USB HID-KBW alt", payload: "%#IFSO$1", note: "Some firmwares use $1" },
+      { title: "3. USB Virtual Com", payload: "%#IFSO$3", note: "Serial mode — our bridge can read this" },
+      { title: "4. CR/LF suffix", payload: "%#IFSOSUF$2", note: "Send Enter after each scan" },
+      { title: "5. USA keyboard", payload: "%#IKB$0", note: "US layout" },
+      { title: "6. Enable all codes", payload: "%#IBARALL$1", note: "Turn QR/1D symbologies on" },
+    ];
+
+    const grid = document.getElementById("qrGrid");
+    for (const code of CODES) {
+      const card = document.createElement("div");
+      card.className = "qr-card";
+      card.innerHTML = `<h3>${code.title}</h3><div class="target"></div><p class="hint">${code.note}<br><code>${code.payload}</code></p>`;
+      grid.appendChild(card);
+      // eslint-disable-next-line no-new
+      new QRCode(card.querySelector(".target"), {
+        text: code.payload,
+        width: 140,
+        height: 140,
+        correctLevel: QRCode.CorrectLevel.M,
+      });
+    }
+
+    const statusBox = document.getElementById("statusBox");
+    const statusTitle = document.getElementById("statusTitle");
+    const statusDetail = document.getElementById("statusDetail");
+    const lastScan = document.getElementById("lastScan");
+
+    function paintStatus(data) {
+      const mode = data.mode || "searching";
+      statusBox.classList.remove("is-ok", "is-wait", "is-bad");
+      if (mode === "serial" || mode === "hid" || data.lastScan) {
+        statusBox.classList.add("is-ok");
+        statusTitle.textContent = "Scanner bridge connected";
+      } else if (mode === "searching") {
+        statusBox.classList.add("is-wait");
+        statusTitle.textContent = "Waiting for scanner…";
+      } else {
+        statusBox.classList.add("is-bad");
+        statusTitle.textContent = "Scanner not detected";
+      }
+      statusDetail.textContent = data.detail || "";
+      if (data.lastScan?.text) {
+        lastScan.hidden = false;
+        lastScan.textContent = `Last scan: ${data.lastScan.text}`;
+      }
+    }
+
+    function connectWs() {
+      const ws = new WebSocket(`ws://${location.host}/ws/scanner`);
+      ws.onmessage = (ev) => {
+        try {
+          const msg = JSON.parse(ev.data);
+          if (msg.type === "status") paintStatus(msg);
+          if (msg.type === "scan") {
+            paintStatus({
+              mode: "serial",
+              detail: `Got scan from ${msg.source}`,
+              lastScan: { text: msg.text },
+            });
+          }
+        } catch {
+          /* ignore */
+        }
+      };
+      ws.onclose = () => setTimeout(connectWs, 1500);
+    }
+
+    async function poll() {
+      try {
+        const res = await fetch("/api/scanner/status");
+        paintStatus(await res.json());
+      } catch {
+        statusBox.classList.add("is-bad");
+        statusTitle.textContent = "Print/scanner server offline";
+        statusDetail.textContent = "Run: npm run print-server";
+      }
+    }
+
+    poll();
+    setInterval(poll, 2000);
+    connectWs();
+  </script>
+</body>
+</html>
