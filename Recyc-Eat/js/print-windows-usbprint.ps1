@@ -11,27 +11,29 @@ function Get-UsbPrintDevicePath {
     return $env:USBPRINT_PATH
   }
 
+  $vid = if ($env:PRINTER_VID) { $env:PRINTER_VID } else { "6868" }
+  $usbPid = if ($env:PRINTER_PID) { $env:PRINTER_PID } else { "0200" }
+  $device = Get-PnpDevice -PresentOnly -ErrorAction SilentlyContinue |
+    Where-Object { $_.Status -eq "OK" -and $_.InstanceId -like "USB\VID_$vid&PID_$usbPid*" } |
+    Select-Object -First 1
+  if (-not $device) {
+    throw "Thermal printer is not connected. Plug it in, power it on, then print again."
+  }
+
   $portsKey = "HKLM:\SYSTEM\CurrentControlSet\Control\Print\Monitors\USB Monitor\Ports"
   if (Test-Path $portsKey) {
     foreach ($port in Get-ChildItem $portsKey) {
       $props = Get-ItemProperty $port.PSPath
-      if ($props."Device Path") {
-        return [string]$props."Device Path"
+      $deviceId = [string]$props."Device Id"
+      $devicePath = [string]$props."Device Path"
+      if ($devicePath -and $deviceId -like "USB\VID_$vid&PID_$usbPid*") {
+        return $devicePath
       }
     }
   }
 
-  $vid = if ($env:PRINTER_VID) { $env:PRINTER_VID } else { "6868" }
-  $pid = if ($env:PRINTER_PID) { $env:PRINTER_PID } else { "0200" }
-  $device = Get-PnpDevice -ErrorAction SilentlyContinue |
-    Where-Object { $_.InstanceId -like "USB\VID_$vid&PID_$pid*" } |
-    Select-Object -First 1
-  if ($device) {
-    $serial = ($device.InstanceId -split "\\")[-1]
-    return "\\?\usb#vid_$vid&pid_$pid#$serial#$UsbPrintGuid"
-  }
-
-  throw "No USB printer port found. Plug the thermal printer in and power it on."
+  $serial = ($device.InstanceId -split "\\")[-1]
+  return "\\?\usb#vid_$vid&pid_$usbPid#$serial#$UsbPrintGuid"
 }
 
 Add-Type -TypeDefinition @"

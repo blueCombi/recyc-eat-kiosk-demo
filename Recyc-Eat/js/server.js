@@ -1,21 +1,18 @@
 /**
  * server.js
- * Local kiosk host + USB thermal printer + 2D scanner bridge.
+ * Local kiosk host and USB thermal printer bridge.
+ * QR receipts are read with the laptop camera on the scan page.
  *
  * From the project root:
  *   npm run print-server
  *
  * Then open:
  *   http://localhost:4000/html/recycling.html
- * Scanner setup:
- *   http://localhost:4000/html/scanner-setup.html
  */
 const path = require("path");
-const http = require("http");
 const express = require("express");
 const cors = require("cors");
 const { printVoucher } = require("./print-voucher");
-const { createScannerBridge } = require("./scanner-bridge");
 
 const app = express();
 const ROOT = path.join(__dirname, "..");
@@ -31,10 +28,6 @@ function asNumber(value, fallback = 0) {
 
 app.get("/api/health", (_req, res) => {
   res.json({ ok: true, service: "econova-print" });
-});
-
-app.get("/api/scanner/status", (_req, res) => {
-  res.json(scanner.getStatus());
 });
 
 app.post("/api/print", async (req, res) => {
@@ -69,12 +62,8 @@ app.post("/api/print", async (req, res) => {
 });
 
 const PORT = 4000;
-const server = http.createServer(app);
-const scanner = createScannerBridge({ server });
-
-server.listen(PORT, () => {
-  console.log(`Kiosk + print + scanner bridge at http://localhost:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`Kiosk + print server at http://localhost:${PORT}`);
   console.log(`Kiosk:  http://localhost:${PORT}/html/recycling.html`);
-  console.log(`Setup:  http://localhost:${PORT}/html/scanner-setup.html`);
   console.log(`Scan:   http://localhost:${PORT}/html/qrscan.html`);
 });

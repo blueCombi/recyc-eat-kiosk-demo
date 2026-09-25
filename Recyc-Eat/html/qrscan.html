@@ -64,7 +64,7 @@
 
         <div class="page-heading">
           <h1 class="kiosk-title">Scan your <em>QR receipt</em></h1>
-          <p class="kiosk-sub">Hold the printed QR up to the camera. USB scanners still work if Windows sees them as a keyboard.</p>
+          <p class="kiosk-sub">Hold the printed QR up to the camera.</p>
         </div>
       </div>
 
@@ -114,7 +114,7 @@
           </ol>
 
           <div class="manual">
-            <label class="manual__label" for="manualID">Scanner not working? Type your receipt ID</label>
+            <label class="manual__label" for="manualID">Camera not working? Type your receipt ID</label>
             <div class="manual__row">
               <input class="manual__input" type="text" id="manualID"
                      placeholder="EM-20260821-1413-001"
@@ -388,34 +388,7 @@
       }
     });
 
-    // Hardware scanner bridge (USB Virtual Com / HID) from the local print server.
-    function connectScannerBridge() {
-      let ws;
-      try {
-        ws = new WebSocket(`ws://${location.host}/ws/scanner`);
-      } catch {
-        return;
-      }
-      ws.onmessage = (ev) => {
-        try {
-          const msg = JSON.parse(ev.data);
-          if (msg.type === "scan" && msg.text) {
-            statusText.textContent = "Hardware scanner read!";
-            loadVoucher(msg.text);
-          } else if (msg.type === "status" && (msg.mode === "serial" || msg.mode === "hid")) {
-            if (!cameraStream) {
-              statusText.innerHTML = "USB scanner ready — scan your receipt" + DOTS;
-            }
-          }
-        } catch {
-          /* ignore */
-        }
-      };
-      ws.onclose = () => setTimeout(connectScannerBridge, 2000);
-    }
-
     window.addEventListener("pagehide", stopCamera);
-    connectScannerBridge();
     startCamera();
   </script>
 </body>
