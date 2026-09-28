@@ -1,0 +1,6 @@
+# This repo is edited on Windows where core.autocrlf rewrites line endings, but
+# these files are read by bash and systemd on the Raspberry Pi. A stray CR makes
+# a script fail with "$'\r': command not found", so pin them to LF even in the
+# Windows working tree — that way copying the folder to the Pi works too.
+*.sh text eol=lf
+*.service text eol=lf

@@ -1,0 +1,26 @@
+# Template. scripts/pi-setup.sh fills in __USER__, __DIR__ and __NODE__ and
+# copies the result to /etc/systemd/system/econova-kiosk.service. Do not enable
+# this file directly.
+[Unit]
+Description=EcoNova kiosk server (pages, thermal printer, ESP32 bridge)
+# The bridges scan for USB boards on their own, but the server should not start
+# announcing a WiFi address before there is one.
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+WorkingDirectory=__DIR__
+ExecStart=__NODE__ Recyc-Eat/js/server.js
+
+# A serial cable gets knocked loose on a kiosk; come back rather than stay down.
+Restart=always
+RestartSec=5
+
+# Uncomment to expose /api/bin/simulate and the fake-insert buttons on
+# hardware-setup.html, for rehearsing with no boards attached.
+#Environment=ECONOVA_ALLOW_SIM=1
+
+[Install]
+WantedBy=multi-user.target
