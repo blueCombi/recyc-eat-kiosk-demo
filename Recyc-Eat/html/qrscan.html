@@ -32,7 +32,7 @@
       </ol>
 
       <div class="scan-intro">
-        <div class="scanner" id="scanner" role="status" aria-live="polite">
+        <div class="scanner scanner--front" id="scanner" role="status" aria-live="polite">
           <div class="scanner__frame">
             <video id="scanVideo" class="scanner__video" playsinline muted autoplay hidden></video>
             <canvas id="scanCanvas" class="scanner__canvas" hidden></canvas>
@@ -60,9 +60,6 @@
           <p class="scanner__status" id="statusText">
             Starting camera<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>
           </p>
-          <button type="button" class="kiosk-btn kiosk-btn--ghost scanner-flip" id="flipCamBtn">
-            Switch camera
-          </button>
         </div>
 
         <div class="page-heading">
@@ -159,7 +156,6 @@
     // burst, then Enter. Ignore slow typing so staff can still use the manual box.
     const SCAN_GAP_MS = 80;
     const RECEIPT_RE = /EM-\d{8}-\d{4}-\d{3}/i;
-    const CAMERA_KEY = "econovaCameraFacing";
     const FRONT_LABEL = /front|user|face|facetime|integrated webcam/i;
     const BACK_LABEL = /back|rear|environment|world/i;
 
@@ -171,7 +167,6 @@
     const video      = document.getElementById("scanVideo");
     const canvas     = document.getElementById("scanCanvas");
     const placeholder = document.getElementById("scanPlaceholder");
-    const flipCamBtn = document.getElementById("flipCamBtn");
     const ctx        = canvas.getContext("2d", { willReadFrequently: true });
 
     let loading = false;
@@ -204,25 +199,6 @@
       return text.toUpperCase();
     }
 
-    function preferredFacing() {
-      try {
-        const saved = localStorage.getItem(CAMERA_KEY);
-        if (saved === "environment" || saved === "user") return saved;
-      } catch {
-        /* ignore */
-      }
-      return "user";
-    }
-
-    function setFacing(facing) {
-      try {
-        localStorage.setItem(CAMERA_KEY, facing);
-      } catch {
-        /* ignore */
-      }
-      scannerEl.classList.toggle("scanner--front", facing === "user");
-    }
-
     function stopCamera() {
       if (rafId) {
         cancelAnimationFrame(rafId);
@@ -237,27 +213,24 @@
       scannerEl.classList.remove("scanner--live");
     }
 
-    async function pickCameraId(facing) {
+    async function pickFrontCameraId() {
       const devices = await navigator.mediaDevices.enumerateDevices();
       const cameras = devices.filter((d) => d.kind === "videoinput" && d.deviceId && d.label);
       if (!cameras.length) return null;
-      if (facing === "user") {
-        return cameras.find((d) => FRONT_LABEL.test(d.label) && !BACK_LABEL.test(d.label))?.deviceId
-          || cameras.find((d) => !BACK_LABEL.test(d.label))?.deviceId
-          || null;
-      }
-      return cameras.find((d) => BACK_LABEL.test(d.label))?.deviceId || null;
+      return cameras.find((d) => FRONT_LABEL.test(d.label) && !BACK_LABEL.test(d.label))?.deviceId
+        || cameras.find((d) => !BACK_LABEL.test(d.label))?.deviceId
+        || null;
     }
 
-    async function openCameraStream(facing) {
+    async function openFrontCamera() {
       const tries = [];
-      const deviceId = await pickCameraId(facing).catch(() => null);
+      const deviceId = await pickFrontCameraId().catch(() => null);
       if (deviceId) {
         tries.push({ deviceId: { exact: deviceId } });
       }
-      tries.push({ facingMode: { exact: facing } });
-      tries.push({ facingMode: { ideal: facing } });
-      tries.push({ facingMode: facing });
+      tries.push({ facingMode: { exact: "user" } });
+      tries.push({ facingMode: { ideal: "user" } });
+      tries.push({ facingMode: "user" });
 
       let lastErr;
       for (const video of tries) {
@@ -387,12 +360,11 @@
       }
 
       try {
-        const facing = preferredFacing();
-        setFacing(facing);
-        cameraStream = await openCameraStream(facing);
+        try { localStorage.removeItem("econovaCameraFacing"); } catch { /* ignore */ }
+        cameraStream = await openFrontCamera();
         const settings = cameraStream.getVideoTracks()[0]?.getSettings?.() || {};
-        if (facing === "user" && settings.facingMode === "environment") {
-          const frontId = await pickCameraId("user");
+        if (settings.facingMode === "environment") {
+          const frontId = await pickFrontCameraId();
           if (frontId) {
             cameraStream.getTracks().forEach((track) => track.stop());
             cameraStream = await navigator.mediaDevices.getUserMedia({
@@ -401,18 +373,12 @@
             });
           }
         }
-        const used = cameraStream.getVideoTracks()[0]?.getSettings?.() || {};
-        if (used.facingMode === "user" || used.facingMode === "environment") {
-          setFacing(used.facingMode);
-        }
         video.srcObject = cameraStream;
         video.hidden = false;
         placeholder.hidden = true;
         scannerEl.classList.add("scanner--live");
         await video.play();
-        statusText.innerHTML = (facing === "user"
-          ? "Hold QR to the front camera"
-          : "Hold QR to the camera") + DOTS;
+        statusText.innerHTML = "Hold QR to the front camera" + DOTS;
         rafId = requestAnimationFrame(tick);
       } catch (err) {
         console.error(err);
@@ -451,13 +417,6 @@
       }
 
       scanBuffer += event.key;
-    });
-
-    flipCamBtn.addEventListener("click", async () => {
-      const next = preferredFacing() === "user" ? "environment" : "user";
-      setFacing(next);
-      stopCamera();
-      await startCamera();
     });
 
     button.addEventListener("click", () => loadVoucher(input.value));

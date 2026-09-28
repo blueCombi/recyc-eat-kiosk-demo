@@ -50,13 +50,6 @@
   transform: scaleX(-1);
 }
 
-.scanner-flip {
-  margin-top: 2px;
-  min-height: 36px;
-  padding: 0.35rem 0.9rem;
-  font-size: var(--text-sm);
-}
-
 .scanner__canvas {
   display: none;
 }
