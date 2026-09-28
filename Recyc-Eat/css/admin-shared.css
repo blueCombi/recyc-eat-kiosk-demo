@@ -195,6 +195,39 @@ body.auth-pending .sidebar-overlay {
   color: var(--green-600);
 }
 
+.sidebar-signout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--teal-700);
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.sidebar-signout svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.sidebar-signout:hover {
+  background: var(--teal-050);
+  color: var(--green-700);
+}
+
+.sidebar-signout:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .admin-main {
   flex: 1;
   margin-left: var(--sidebar-w);
@@ -620,6 +653,9 @@ body.auth-pending .sidebar-overlay {
 }
 
 .btn:active { transform: translateY(1px); }
+
+/* display:inline-flex above would otherwise defeat the hidden attribute */
+.btn[hidden] { display: none; }
 
 .btn svg { width: 16px; height: 16px; }
 
