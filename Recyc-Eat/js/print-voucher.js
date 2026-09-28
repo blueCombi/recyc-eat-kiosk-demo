@@ -223,7 +223,7 @@ async function buildVoucherBytes({ points, itemsRecycled, items, voucherCode, re
         printer.drawLine();
 
         printer.style("b");
-        printCentered(printer, "Every recycle makes a difference");
+        printCentered(printer, "Every Recycle Feeds");
         printer.style("NORMAL").text(" ").feed(2).cut().close((closeErr) => {
           if (closeErr) {
             return reject(new Error(`Printer command failed: ${closeErr.message || closeErr}`));

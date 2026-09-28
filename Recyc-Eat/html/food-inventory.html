@@ -28,7 +28,12 @@
         <a class="nav-link" href="participation-trends.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19V5m0 14h16M8 15l3-4 3 2 4-6"/></svg>Participation Trends</a>
         <a class="nav-link" href="kiosk-settings.html"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9c.2.6.7 1 1.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>Kiosk Settings</a>
       </nav>
-      <div class="sidebar-footer"><a href="recycling.html">← Back to kiosk</a></div>
+      <div class="sidebar-footer">
+        <button class="sidebar-signout" type="button" id="signOutBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+          Sign out
+        </button>
+      </div>
     </aside>
 
     <div class="admin-main">
@@ -44,10 +49,6 @@
             <span class="admin-avatar__mark">AD</span>
             <div class="admin-avatar__meta"><strong>Admin</strong><span>EcoNova Staff</span></div>
           </div>
-          <button class="btn btn-ghost btn-sm" type="button" id="signOutBtn">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"/></svg>
-            Sign out
-          </button>
         </div>
       </header>
 
@@ -128,8 +129,14 @@
           </article>
 
           <article class="card">
-            <div class="card-header"><h2>Recent inventory changes</h2></div>
-            <div class="table-wrap">
+            <div class="card-header">
+              <h2>Recent inventory changes</h2>
+              <div class="log-filter">
+                <input class="input" type="date" id="logDate" aria-label="Filter changes by date" />
+                <button class="btn btn-ghost btn-sm" type="button" id="logDateClear" hidden>All dates</button>
+              </div>
+            </div>
+            <div class="table-wrap log-scroll">
               <table class="table">
                 <thead>
                   <tr>
@@ -244,8 +251,10 @@
       restockItem,
       deleteItem,
     } from "../js/food-inventory-data.js";
+    import { localDateKey } from "../js/date-utils.js";
 
     let items = [];
+    let logEntries = [];
     let pendingDeleteId = null;
 
     function statusBadge(status) {
@@ -310,11 +319,26 @@
         }).join("");
       }
 
+      logEntries = log;
+      renderLog();
+    }
+
+    function renderLog() {
       const logBody = document.getElementById("logBody");
-      if (!log.length) {
-        logBody.innerHTML = `<tr><td colspan="4" class="state-box">No restocks or redemptions logged yet.</td></tr>`;
+      const pickedDay = document.getElementById("logDate").value;
+      document.getElementById("logDateClear").hidden = !pickedDay;
+      const rows = pickedDay
+        ? logEntries.filter((entry) => localDateKey(new Date(entry.at)) === pickedDay)
+        : logEntries;
+
+      if (!rows.length) {
+        logBody.innerHTML = `<tr><td colspan="4" class="state-box">${
+          pickedDay
+            ? "No inventory changes on that date."
+            : "No restocks or redemptions logged yet."
+        }</td></tr>`;
       } else {
-        logBody.innerHTML = log.map((entry) => {
+        logBody.innerHTML = rows.map((entry) => {
           const change = Number(entry.change) || 0;
           const changeClass = change < 0 ? "change-negative" : change > 0 ? "change-positive" : "";
           const changeLabel = change > 0 ? `+${change}` : String(change);
@@ -376,6 +400,13 @@
         const target = items.find((i) => i.status === "out" || i.status === "low");
         if (target) openRestock(target.id);
         else openAdd();
+      });
+
+      const logDate = document.getElementById("logDate");
+      logDate.addEventListener("change", renderLog);
+      document.getElementById("logDateClear").addEventListener("click", () => {
+        logDate.value = "";
+        renderLog();
       });
 
       document.querySelectorAll("[data-close]").forEach((btn) => {
