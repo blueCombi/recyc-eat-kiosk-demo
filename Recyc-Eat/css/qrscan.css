@@ -43,8 +43,18 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transform: scaleX(-1);
   z-index: 1;
+}
+
+.scanner--front .scanner__video {
+  transform: scaleX(-1);
+}
+
+.scanner-flip {
+  margin-top: 2px;
+  min-height: 36px;
+  padding: 0.35rem 0.9rem;
+  font-size: var(--text-sm);
 }
 
 .scanner__canvas {

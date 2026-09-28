@@ -1,0 +1,18 @@
+DirectoryIndex index.html Recyc-Eat/index.html
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Whole-repo upload: serve the kiosk from Recyc-Eat/ without changing URLs.
+  RewriteRule ^$ Recyc-Eat/ [L]
+  RewriteCond %{REQUEST_URI} !^/Recyc-Eat/
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^(.*)$ Recyc-Eat/$1 [L]
+</IfModule>

@@ -17,7 +17,7 @@ const { printVoucher } = require("./print-voucher");
 const app = express();
 const ROOT = path.join(__dirname, "..");
 
-app.use(cors());
+app.use(cors({ origin: true }));
 app.use(express.json());
 app.use(express.static(ROOT));
 

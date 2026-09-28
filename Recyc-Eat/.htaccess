@@ -1,0 +1,27 @@
+DirectoryIndex index.html
+Options -Indexes
+
+<IfModule mod_mime.c>
+  AddType application/javascript .js
+  AddType text/css .css
+  AddType image/png .png
+  AddType image/jpeg .jpg .jpeg
+  AddType image/webp .webp
+  AddType image/svg+xml .svg
+</IfModule>
+
+# ES modules fail if the host sends .js as text/plain.
+<IfModule mod_headers.c>
+  <FilesMatch "\.js$">
+    Header set Content-Type "application/javascript; charset=utf-8"
+  </FilesMatch>
+</IfModule>
+
+# Camera and Firebase Auth need HTTPS. Skip localhost so XAMPP still works.
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP_HOST} !^localhost [NC]
+  RewriteCond %{HTTP_HOST} !^127\.0\.0\.1$
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+</IfModule>

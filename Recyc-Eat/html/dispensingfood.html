@@ -86,9 +86,15 @@
       sub.textContent = `${shortName} is on its way.`;
     }
 
-    // When the ESP32 is on the LAN, POST the coil so the matching motor turns.
-    // Leave ESP32_DISPENSE_URL empty until that board is wired up.
-    const ESP32_DISPENSE_URL = "";
+    // ESP32 must be on the same LAN as the kiosk PC. Set once in this browser:
+    // localStorage.setItem("econovaDispenseUrl", "http://192.168.x.x/dispense")
+    const ESP32_DISPENSE_URL = (() => {
+      try {
+        return localStorage.getItem("econovaDispenseUrl") || "";
+      } catch {
+        return "";
+      }
+    })();
     async function requestDispense(coilNumber) {
       if (!ESP32_DISPENSE_URL || !coilNumber) return;
       await fetch(ESP32_DISPENSE_URL, {

@@ -155,7 +155,7 @@
         console.error("Thermal print failed:", err);
         statusText.classList.add("is-error");
         const detail = String(err.message || "").trim();
-        const offline = /Failed to fetch|NetworkError|Load failed/i.test(detail);
+        const offline = /Failed to fetch|NetworkError|Load failed|did not respond|AbortError/i.test(detail);
         statusText.textContent = offline
           ? "Printer server is off. Your QR is still saved — continuing."
           : `Couldn't print${detail ? `: ${detail.slice(0, 90)}` : ""}. Your QR is still on the next screen.`;
