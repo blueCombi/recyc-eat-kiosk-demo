@@ -48,7 +48,7 @@
       <img src="../images/RecycleBin.jpg" alt="Bottles and cans in a recycling bin" class="hero-art">
 
       <div class="start-actions">
-        <a href="howto.html" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" role="button">
+        <a href="howto.html" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="startRecyclingBtn" role="button">
           START RECYCLING <span aria-hidden="true">&rarr;</span>
         </a>
 
@@ -65,10 +65,19 @@
     <span>New here? Tap Start Recycling. Returning? Scan your QR receipt to keep your points.</span>
   </footer>
 
+  <script>
+    ["voucherID","returnVoucherID","totalPoints","sessionItems","dispenseName","dispenseSku","dispenseCoil","resumeVisit"]
+      .forEach(function (key) { sessionStorage.removeItem(key); });
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { loadKioskSettings } from "../js/kiosk-settings-data.js";
     import { loadCoilInventory } from "../js/food-inventory-data.js";
+    import { clearKioskSession } from "../js/kiosk-session.js";
+
+    clearKioskSession();
+    document.getElementById("startRecyclingBtn")?.addEventListener("click", clearKioskSession);
 
     const notice = document.getElementById("stockNotice");
     const noticeTitle = document.getElementById("stockNoticeTitle");

@@ -224,7 +224,12 @@
         return;
       } catch (err) {
         console.error("Redeem failed:", err);
-        error.textContent = "Could not reach the dispenser. Try again.";
+        const detail = String(err.message || "").trim();
+        error.textContent = /permission|PERMISSION/i.test(detail)
+          ? detail
+          : (detail
+            ? `Could not save the redemption: ${detail.slice(0, 140)}`
+            : "Could not save the redemption. Check Firebase, then try again.");
         error.hidden = false;
         button.disabled = false;
         renderTiles();

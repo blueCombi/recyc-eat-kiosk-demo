@@ -48,3 +48,15 @@ if (!settings.kioskOpen && !ALLOW_WHEN_CLOSED.has(page)) {
   });
   arm();
 }
+
+// Browser / keyboard Back must not leave the kiosk for Login or Admin.
+if (page !== "login.html") {
+  history.pushState({ kiosk: page }, "", location.href);
+  window.addEventListener("popstate", () => {
+    if (page === HOME) {
+      history.pushState({ kiosk: HOME }, "", location.href);
+      return;
+    }
+    location.replace(HOME);
+  });
+}

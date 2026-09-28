@@ -1,0 +1,26 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Public kiosk: recycle, scan, redeem, and print without signing in.
+    // Admin pages still sign in; keep settings writes for signed-in staff only.
+    match /vouchers/{id} {
+      allow read, write: if true;
+    }
+    match /sessions/{id} {
+      allow read, write: if true;
+    }
+    match /food_inventory/{id} {
+      allow read, write: if true;
+    }
+    match /inventory_log/{id} {
+      allow read, write: if true;
+    }
+    match /redemptions/{id} {
+      allow read, write: if true;
+    }
+    match /kiosk_settings/{id} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+  }
+}

@@ -373,13 +373,21 @@ export async function consumeReward(voucherID, sku) {
       });
     });
   } catch (err) {
-    const code = err.code;
-    const message = String(err.message || "");
+    const nested = err?.customData?.originalError || err?.cause || err;
+    const code = String(nested.code || err.code || "");
+    const message = String(nested.message || err.message || "");
     if (code === "unavailable" || message.toLowerCase().includes("out of stock") || message.includes("temporarily unavailable")) {
-      return { success: false, code: "unavailable", message: err.message || UNAVAILABLE_MESSAGE };
+      return { success: false, code: "unavailable", message: nested.message || UNAVAILABLE_MESSAGE };
     }
     if (code === "points" || code === "redeemed" || code === "missing") {
-      return { success: false, code, message: err.message };
+      return { success: false, code, message: nested.message };
+    }
+    if (code === "permission-denied" || message.includes("PERMISSION_DENIED") || message.includes("Missing or insufficient permissions")) {
+      return {
+        success: false,
+        code: "permission",
+        message: "Firebase blocked the save. In Firestore Rules, allow the kiosk to write vouchers, food_inventory, redemptions, and inventory_log.",
+      };
     }
     throw err;
   }

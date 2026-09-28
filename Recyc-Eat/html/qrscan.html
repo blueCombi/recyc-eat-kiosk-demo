@@ -152,6 +152,7 @@
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { scanVoucher } from '../js/firebase-config.js';
+    import { markReturnVisit } from '../js/kiosk-session.js';
 
     const DOTS = '<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
     // USB 2D scanners type like a keyboard (HID wedge). Characters arrive in a
@@ -290,10 +291,9 @@
         const result = await scanVoucher(voucherID);
 
         if (result.success) {
-          sessionStorage.setItem("returnVoucherID", voucherID);
-          sessionStorage.setItem("totalPoints", result.total_points);
+          markReturnVisit(voucherID, result.total_points);
           statusText.textContent = `${result.total_points} points found! Taking you to the bin...`;
-          setTimeout(() => { window.location.href = "insert.html"; }, 1200);
+          setTimeout(() => { window.location.replace("insert.html"); }, 1200);
           return;
         }
 

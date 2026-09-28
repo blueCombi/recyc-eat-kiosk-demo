@@ -84,5 +84,10 @@
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
+  <script type="module">
+    import { clearKioskSession } from "../js/kiosk-session.js";
+    // How-to is only for new visits. A cancelled QR scan must not carry points here.
+    clearKioskSession();
+  </script>
 </body>
 </html>

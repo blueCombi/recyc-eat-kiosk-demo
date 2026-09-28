@@ -53,7 +53,7 @@
 
       <p class="insert-status" id="waitingText" role="status" aria-live="polite">Waiting for Item...</p>
 
-      <a href="recycling.html" class="kiosk-btn kiosk-btn--ghost" role="button">
+      <a href="recycling.html" class="kiosk-btn kiosk-btn--ghost" id="cancelVisit" role="button">
         CANCEL <span aria-hidden="true">&#10005;</span>
       </a>
     </main>
@@ -68,6 +68,7 @@
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
     import { scanVoucher } from '../js/firebase-config.js';
+    import { clearKioskSession, takeReturnVisit } from '../js/kiosk-session.js';
 
     const DEFAULT_TEXT = "Waiting for Item...";
     const waitingEl    = document.getElementById("waitingText");
@@ -81,9 +82,22 @@
       setTimeout(() => setStatus(DEFAULT_TEXT, false), delay);
     }
 
-    // Returning users arrive here from qrscan.html — confirm the voucher is
-    // still valid before letting them add more items to it.
+    let resumeAbandoned = false;
+    window.addEventListener("pagehide", () => { resumeAbandoned = true; });
+
+    document.getElementById("cancelVisit")?.addEventListener("click", () => {
+      resumeAbandoned = true;
+      clearKioskSession();
+    });
+
+    // Returning users arrive here from qrscan.html only. Start Recycling
+    // and Cancel drop resumeVisit, so leftover points cannot come back.
     async function resumeSession() {
+      if (!takeReturnVisit()) {
+        sessionStorage.removeItem("returnVoucherID");
+        return;
+      }
+
       const returnID = sessionStorage.getItem("returnVoucherID");
       if (!returnID) return;
 
@@ -91,8 +105,10 @@
 
       try {
         const result = await scanVoucher(returnID);
+        if (resumeAbandoned) return;
 
         if (result.success) {
+          sessionStorage.removeItem("returnVoucherID");
           sessionStorage.setItem("voucherID", returnID);
           sessionStorage.setItem("totalPoints", result.total_points);
           setStatus(`Welcome back! ${result.total_points} points loaded`);
@@ -103,6 +119,7 @@
           resetStatus(3500);
         }
       } catch (err) {
+        if (resumeAbandoned) return;
         setStatus("Offline — points will sync once reconnected.", true);
         resetStatus(3500);
       }
