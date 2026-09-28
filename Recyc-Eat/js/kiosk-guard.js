@@ -43,7 +43,9 @@ if (!settings.kioskOpen && !ALLOW_WHEN_CLOSED.has(page)) {
     timer = setTimeout(() => { location.href = HOME; }, ms);
   };
 
-  ["pointerdown", "keydown", "touchstart"].forEach((type) => {
+  // "kiosk-activity" comes from hardware-client.js: inserting items is activity
+  // even though the shopper never touches the screen.
+  ["pointerdown", "keydown", "touchstart", "kiosk-activity"].forEach((type) => {
     document.addEventListener(type, arm, { passive: true });
   });
   arm();

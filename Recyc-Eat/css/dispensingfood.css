@@ -141,6 +141,9 @@
   color: var(--teal-700);
 }
 
+/* the coil never confirmed it turned */
+.dispense-status__text.is-error { color: #b03a39; }
+
 .dispense-progress {
   width: 100%;
   height: 12px;

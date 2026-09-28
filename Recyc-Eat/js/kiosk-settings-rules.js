@@ -1,9 +1,17 @@
 // Shared defaults and checks for kiosk settings, kept free of Firebase.
+import {
+  ITEM_TYPES,
+  ITEM_POINT_FIELDS,
+  DEFAULT_ITEM_POINTS,
+} from "./item-types.js";
+
+const POINT_DEFAULTS = ITEM_TYPES.reduce((fields, item) => {
+  fields[item.settingsKey] = item.points;
+  return fields;
+}, {});
 
 export const DEFAULT_SETTINGS = {
-  pointsSmallBottle: 5,
-  pointsBigBottle: 7,
-  pointsCan: 5,
+  ...POINT_DEFAULTS,
   redemptionThreshold: 50,
   minRedemption: 30,
   maxRedemption: 150,
@@ -17,9 +25,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 const INT_FIELDS = [
-  "pointsSmallBottle",
-  "pointsBigBottle",
-  "pointsCan",
+  ...ITEM_POINT_FIELDS,
   "redemptionThreshold",
   "minRedemption",
   "maxRedemption",
@@ -29,8 +35,27 @@ const INT_FIELDS = [
   "lowStockAlert",
 ];
 
+// Saved settings from before the bin reported sizes only had three point
+// fields. Carry those values over so nobody's tuned values reset to default;
+// the three new sizes start on the defaults above.
+const LEGACY_POINT_FIELDS = {
+  pointsPlasticSmall: "pointsSmallBottle",
+  pointsPlasticLarge: "pointsBigBottle",
+  pointsCanMedium: "pointsCan",
+};
+
+function migrateLegacyPoints(raw, next) {
+  Object.entries(LEGACY_POINT_FIELDS).forEach(([field, legacyField]) => {
+    if (raw?.[field] != null) return;
+    const legacy = Number(raw?.[legacyField]);
+    if (Number.isFinite(legacy) && legacy > 0) next[field] = Math.round(legacy);
+  });
+}
+
 export function sanitizeSettings(raw) {
   const next = { ...DEFAULT_SETTINGS, ...(raw || {}) };
+
+  migrateLegacyPoints(raw, next);
 
   INT_FIELDS.forEach((key) => {
     const n = Number(next[key]);
@@ -42,11 +67,16 @@ export function sanitizeSettings(raw) {
   next.availableRewards = String(next.availableRewards || "").trim()
     || DEFAULT_SETTINGS.availableRewards;
 
+  // The old field names are not written back, so a saved doc drops them.
+  Object.values(LEGACY_POINT_FIELDS).forEach((legacyField) => {
+    delete next[legacyField];
+  });
+
   return next;
 }
 
 export function validateSettings(data) {
-  if (data.pointsSmallBottle < 1 || data.pointsBigBottle < 1 || data.pointsCan < 1) {
+  if (ITEM_POINT_FIELDS.some((key) => data[key] < 1)) {
     return "Item points must be at least 1.";
   }
   if (data.redemptionThreshold < 1) {
@@ -65,10 +95,12 @@ export function validateSettings(data) {
 }
 
 export function pointsFromSettings(data) {
-  return {
-    small_bottle: data.pointsSmallBottle,
-    big_bottle:   data.pointsBigBottle,
-    aluminum_can: data.pointsCan,
-    threshold:    data.redemptionThreshold,
-  };
+  const points = { threshold: data.redemptionThreshold };
+  ITEM_TYPES.forEach((item) => {
+    const value = Number(data[item.settingsKey]);
+    points[item.key] = Number.isFinite(value) && value > 0
+      ? value
+      : DEFAULT_ITEM_POINTS[item.key];
+  });
+  return points;
 }

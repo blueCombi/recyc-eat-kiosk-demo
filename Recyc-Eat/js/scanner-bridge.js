@@ -6,9 +6,17 @@
  * and pushes decoded text to WebSocket clients + HTTP subscribers.
  */
 const { SerialPort } = require("serialport");
-const { ReadlineParser } = require("@serialport/parser-readline");
 const HID = require("node-hid");
 const { WebSocketServer } = require("ws");
+const claims = require("./serial-claims");
+const { attachLineReader } = require("./serial-lines");
+
+const OWNER = "scanner";
+
+// The Raspberry Pi host's own serial hardware: ttyAMA0 is the onboard Bluetooth
+// on a Pi 3 and ttyS0 / serial0 are the GPIO pins. Opening them finds nothing
+// and breaks Bluetooth.
+const ONBOARD_SERIAL_PATH = /^\/dev\/(ttyAMA\d+|ttyS\d+|serial\d+|ttyprintk|console)$/i;
 
 const SCANNER_VIDS = new Set([
   0x3151, // Yichip / some OEM modules
@@ -33,7 +41,15 @@ function createScannerBridge({ server, onScan }) {
   const openHids = [];
   let knownPorts = new Set();
 
-  const wss = new WebSocketServer({ server, path: "/ws/scanner" });
+  // One ws instance per path, each routing its own upgrades: passing `server`
+  // to both would have this one reject /ws/hardware connections outright.
+  const wss = new WebSocketServer({ noServer: true });
+  server.on("upgrade", (req, socket, head) => {
+    const pathname = String(req.url || "").split("?")[0];
+    if (pathname !== "/ws/scanner") return;
+    wss.handleUpgrade(req, socket, head, (ws) => wss.emit("connection", ws, req));
+  });
+
   wss.on("connection", (ws) => {
     clients.add(ws);
     ws.send(JSON.stringify({ type: "status", ...state }));
@@ -91,12 +107,16 @@ function createScannerBridge({ server, onScan }) {
           /* ignore */
         }
         openPorts.delete(path);
+        claims.release(path);
       }
     }
 
     for (const portInfo of list) {
       const path = portInfo.path;
       if (openPorts.has(path)) continue;
+      if (ONBOARD_SERIAL_PATH.test(path || "")) continue;
+      // The ESP32 bridge may already own this port; a CH340 could be either one.
+      if (claims.isClaimedByOther(path, OWNER)) continue;
 
       // Skip long-lived Bluetooth serial links unless they just appeared
       const isBluetooth = /BTHENUM|Bluetooth/i.test(portInfo.pnpId || "")
@@ -106,8 +126,10 @@ function createScannerBridge({ server, onScan }) {
         ? parseInt(String(portInfo.vendorId).replace(/^0x/i, ""), 16)
         : null;
       const interestingVid = vid != null && SCANNER_VIDS.has(vid);
-      const looksUsbSerial = /USB|CH340|Serial|CDC|QR|Scan|Barcode/i.test(
-        `${portInfo.manufacturer || ""} ${portInfo.friendlyName || ""} ${portInfo.pnpId || ""}`,
+      // Linux reports little about a USB adapter beyond its device path, so the
+      // path counts as a hint alongside the Windows-style labels.
+      const looksUsbSerial = /USB|CH340|Serial|CDC|QR|Scan|Barcode|ttyUSB|ttyACM/i.test(
+        `${portInfo.manufacturer || ""} ${portInfo.friendlyName || ""} ${portInfo.pnpId || ""} ${path || ""}`,
       );
 
       if (isBluetooth && !isNew) continue;
@@ -130,10 +152,17 @@ function createScannerBridge({ server, onScan }) {
       }
 
       if (!opened) continue;
+      if (!claims.claim(path, OWNER)) {
+        try {
+          opened.port.close();
+        } catch {
+          /* ignore */
+        }
+        continue;
+      }
 
       const { port, baudRate } = opened;
-      const parser = port.pipe(new ReadlineParser({ delimiter: /[\r\n]+/ }));
-      parser.on("data", (line) => emitScan(line, `${path}@${baudRate}`));
+      attachLineReader(port, (line) => emitScan(line, `${path}@${baudRate}`));
       port.on("error", (err) => {
         console.warn(`[scanner] ${path} error:`, err.message);
         try {
@@ -142,6 +171,7 @@ function createScannerBridge({ server, onScan }) {
           /* ignore */
         }
         openPorts.delete(path);
+        claims.release(path);
       });
       openPorts.set(path, port);
       setStatus(

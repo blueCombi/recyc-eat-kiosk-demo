@@ -1,10 +1,15 @@
 /**
  * print-button-snippet.js
  * Browser helper the print screen uses to talk to the local print server.
- * The thermal printer stays on the kiosk PC. Hostinger only serves the website.
- * Optional override: localStorage.setItem("econovaPrintApi", "http://127.0.0.1:4000/api/print")
+ * The thermal printer stays on the kiosk PC, which is also where the ESP32
+ * boards plug in. Hostinger only serves the website.
+ *
+ * A tablet on the same WiFi works without setup as long as the kiosk is opened
+ * from the PC's address, since the printer answers on the same host as the page.
+ * Optional override: localStorage.setItem("econovaPrintApi", "http://192.168.1.50:4000/api/print")
  */
 const PRINT_TIMEOUT_MS = 4000;
+const PRINT_PORT = "4000";
 
 export function getPrintApi() {
   try {
@@ -14,11 +19,12 @@ export function getPrintApi() {
     /* ignore */
   }
 
-  const { hostname, port, origin } = location;
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    if (port === "4000") return `${origin}/api/print`;
+  const { hostname, port, origin, protocol } = location;
+  if (port === PRINT_PORT && protocol.startsWith("http")) return `${origin}/api/print`;
+  if (protocol.startsWith("http") && hostname) {
+    return `http://${hostname}:${PRINT_PORT}/api/print`;
   }
-  return "http://127.0.0.1:4000/api/print";
+  return `http://127.0.0.1:${PRINT_PORT}/api/print`;
 }
 
 export const PRINT_API = getPrintApi();

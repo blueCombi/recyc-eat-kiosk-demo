@@ -2,6 +2,7 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc, updateDoc, increment, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { DEFAULT_ITEM_POINTS } from "./item-types.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAQZstw1qOUltsN_HKPZE7qNI2uRRWpwU",
@@ -24,11 +25,11 @@ const authReady = setPersistence(auth, browserSessionPersistence)
   .catch((err) => console.error("Could not set auth persistence:", err));
 
 // ─── Points config ───────────────────────────────────────────────
+// One entry per item type the bin can report, keyed the same way as
+// item-types.js. Live admin values overwrite these on every kiosk screen.
 export const POINTS = {
-  small_bottle: 5,
-  big_bottle:   7,
-  aluminum_can: 5,
-  threshold:    50,
+  ...DEFAULT_ITEM_POINTS,
+  threshold: 50,
 };
 
 // ─── Generate Receipt ID  e.g. EM-20260821-1413-001 ─────────────

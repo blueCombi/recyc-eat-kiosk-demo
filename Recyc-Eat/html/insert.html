@@ -44,10 +44,9 @@
         </div>
 
         <div class="kiosk-ring__disc">
-          <a href="itemaccepted.html?award=1" class="kiosk-ring__art" id="insertArt"
-             aria-label="Simulate inserting an item, double tap to simulate a rejected item">
+          <div class="kiosk-ring__art">
             <img src="../images/bottlesncan.png" alt="A plastic bottle and an aluminum can">
-          </a>
+          </div>
         </div>
       </div>
 
@@ -69,13 +68,20 @@
   <script type="module">
     import { scanVoucher } from '../js/firebase-config.js';
     import { clearKioskSession, takeReturnVisit } from '../js/kiosk-session.js';
+    import { connectBin } from '../js/hardware-client.js';
+    import { itemTypeFor } from '../js/item-types.js';
 
     const DEFAULT_TEXT = "Waiting for Item...";
     const waitingEl    = document.getElementById("waitingText");
 
-    function setStatus(message, isError) {
+    // The voucher messages below matter more than the bin's idle chatter, so
+    // they hold the line for a moment before hardware status takes it back.
+    let statusHeldUntil = 0;
+
+    function setStatus(message, isError, holdMs = 0) {
       waitingEl.textContent = message;
       waitingEl.classList.toggle("is-error", !!isError);
+      if (holdMs) statusHeldUntil = Date.now() + holdMs;
     }
 
     function resetStatus(delay) {
@@ -101,7 +107,7 @@
       const returnID = sessionStorage.getItem("returnVoucherID");
       if (!returnID) return;
 
-      setStatus("Loading your voucher...");
+      setStatus("Loading your voucher...", false, 2600);
 
       try {
         const result = await scanVoucher(returnID);
@@ -111,51 +117,86 @@
           sessionStorage.removeItem("returnVoucherID");
           sessionStorage.setItem("voucherID", returnID);
           sessionStorage.setItem("totalPoints", result.total_points);
-          setStatus(`Welcome back! ${result.total_points} points loaded`);
+          setStatus(`Welcome back! ${result.total_points} points loaded`, false, 2600);
           resetStatus(2500);
         } else {
           sessionStorage.removeItem("returnVoucherID");
-          setStatus(result.message, true);
+          setStatus(result.message, true, 3600);
           resetStatus(3500);
         }
       } catch (err) {
         if (resumeAbandoned) return;
-        setStatus("Offline — points will sync once reconnected.", true);
+        setStatus("Offline — points will sync once reconnected.", true, 3600);
         resetStatus(3500);
       }
     }
 
     resumeSession();
 
-    // Same convention as itemaccepted.html: one tap means the bin took the
-    // item, two taps mean it spat it back out. The timer is what tells them
-    // apart, since a double tap also fires a first click.
-    const insertArt = document.getElementById("insertArt");
-    let tapTimer = null;
-    let leaving  = false;
+    // ── the bin drives this screen ─────────────────────────────────
+    // Points are only ever awarded for an item the sorting ESP32 accepted, so
+    // there is nothing to tap here: the bin either takes the item or returns it.
+    let leaving = false;
+    let bin = null;
 
-    insertArt.addEventListener("click", (event) => {
-      event.preventDefault();
-      if (leaving || tapTimer) return;
-
-      tapTimer = setTimeout(() => {
-        tapTimer = null;
-        leaving  = true;
-        window.location.href = insertArt.getAttribute("href");
-      }, 260);
-    });
-
-    insertArt.addEventListener("dblclick", (event) => {
-      event.preventDefault();
+    function goTo(url) {
       if (leaving) return;
+      leaving = true;
+      bin?.close();
+      window.location.href = url;
+    }
 
-      clearTimeout(tapTimer);
-      tapTimer = null;
-      leaving  = true;
+    bin = connectBin({
+      onStatus(message) {
+        if (leaving || Date.now() < statusHeldUntil) return;
+        if (!message.bin.connected) {
+          setStatus("Bin is offline — please ask our staff.", true);
+          return;
+        }
+        if (message.bin.state === "busy") {
+          setStatus("Sorting the last item — one moment...", false);
+          return;
+        }
+        setStatus(DEFAULT_TEXT, false);
+      },
 
-      setStatus("Item not recognised — returning it.", true);
-      setTimeout(() => { window.location.href = "itemrejected.html"; }, 600);
+      onDetect(message) {
+        if (leaving) return;
+        const grams = message.weight ? ` (${message.weight} g)` : "";
+        setStatus(`Checking your item${grams}...`, false, 4000);
+      },
+
+      // The bin has already weighed, identified and kept the item. An item the
+      // app has no point value for is returned rather than silently dropped.
+      onItem(message) {
+        const type = itemTypeFor(message.material, message.size);
+        if (!type) {
+          goTo("itemrejected.html?reason=UNKNOWN_ITEM");
+          return;
+        }
+        sessionStorage.setItem("pendingInsert", JSON.stringify({
+          key: type.key,
+          material: message.material,
+          size: message.size,
+          weight: message.weight,
+          at: message.at,
+        }));
+        setStatus("Item accepted!", false, 4000);
+        goTo("itemaccepted.html?award=1");
+      },
+
+      onReject(message) {
+        setStatus(message.message || "Item returned.", true, 4000);
+        goTo(`itemrejected.html?reason=${encodeURIComponent(message.reason || "UNKNOWN_ITEM")}`);
+      },
+
+      onOffline() {
+        if (leaving || Date.now() < statusHeldUntil) return;
+        setStatus("Waiting for the kiosk hardware...", true);
+      },
     });
+
+    window.addEventListener("pagehide", () => bin?.close());
   </script>
 </body>
 </html>

@@ -28,7 +28,7 @@
       <div class="reject-status">
         <span class="reject-mark" aria-hidden="true">!</span>
         <h1 class="kiosk-title reject-title">Item Rejected</h1>
-        <p class="kiosk-sub">Your item has been returned. Nothing was charged to your points.</p>
+        <p class="kiosk-sub" id="rejectReason">Your item has been returned. Nothing was charged to your points.</p>
       </div>
 
       <div class="kiosk-ring reject-ring">
@@ -77,6 +77,20 @@
       applySettingsToPoints(POINTS, await loadKioskSettings());
     } catch (err) {
       console.error("Using default point values:", err);
+    }
+
+    // The bin says why it pushed the item back out, so say it in plain words
+    // instead of leaving the shopper to guess.
+    const REASONS = {
+      TOO_LIGHT:    "That was too light to be a bottle or can — it has been returned. Nothing was charged to your points.",
+      OVERWEIGHT:   "That was too heavy, so it came back. Empty any liquid first. Nothing was charged to your points.",
+      INVALID_SIZE: "The size sensors could not read that item, so it came back. Nothing was charged to your points.",
+      UNKNOWN_ITEM: "The bin could not identify that item, so it came back. Nothing was charged to your points.",
+    };
+
+    const reason = new URLSearchParams(location.search).get("reason");
+    if (reason && REASONS[reason.toUpperCase()]) {
+      document.getElementById("rejectReason").textContent = REASONS[reason.toUpperCase()];
     }
 
     // Stopping here shouldn't throw away points already earned, so this

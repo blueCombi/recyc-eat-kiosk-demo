@@ -71,6 +71,8 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
+    import { dispenseCoil } from '../js/hardware-client.js';
+
     const name = (sessionStorage.getItem("dispenseName") || "reward").trim();
     const coil = Number(sessionStorage.getItem("dispenseCoil") || 0);
     const label = document.getElementById("dispenseLabel");
@@ -86,31 +88,40 @@
       sub.textContent = `${shortName} is on its way.`;
     }
 
-    // ESP32 must be on the same LAN as the kiosk PC. Set once in this browser:
-    // localStorage.setItem("econovaDispenseUrl", "http://192.168.x.x/dispense")
-    const ESP32_DISPENSE_URL = (() => {
-      try {
-        return localStorage.getItem("econovaDispenseUrl") || "";
-      } catch {
-        return "";
-      }
-    })();
-    async function requestDispense(coilNumber) {
-      if (!ESP32_DISPENSE_URL || !coilNumber) return;
-      await fetch(ESP32_DISPENSE_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ coilNumber }),
-      });
+    // The coil motors hang off the vending ESP32, which is on USB at the kiosk
+    // PC, so the turn goes through the local bridge on port 4000.
+    let next = null;
+
+    function goWhenDone(delay) {
+      clearTimeout(next);
+      next = setTimeout(function () {
+        window.location.href = "foodrewardready.html";
+      }, delay);
     }
 
-    requestDispense(coil).catch((err) => {
-      console.warn("ESP32 dispense skipped:", err.message);
-    });
+    async function turnCoil(coilNumber) {
+      if (!coilNumber) {
+        goWhenDone(4000);
+        return;
+      }
 
-    setTimeout(function () {
-      window.location.href = "foodrewardready.html";
-    }, 4000);
+      try {
+        await dispenseCoil(coilNumber);
+        status.textContent = `${shortName} has been released.`;
+        goWhenDone(1500);
+      } catch (err) {
+        // The points and the stock count are already spent, so never send them
+        // back here — tell them to ask staff and carry on to the last screen.
+        console.error("Coil did not turn:", err);
+        status.textContent = "The machine did not confirm the release — please ask our staff.";
+        status.classList.add("is-error");
+        goWhenDone(5000);
+      }
+    }
+
+    // Walks over to Ready on its own if the bridge never answers at all.
+    goWhenDone(20000);
+    turnCoil(coil);
   </script>
 </body>
 </html>

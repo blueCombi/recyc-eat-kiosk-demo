@@ -5,6 +5,7 @@ const SESSION_KEYS = [
   "returnVoucherID",
   "totalPoints",
   "sessionItems",
+  "pendingInsert",
   "dispenseName",
   "dispenseSku",
   "dispenseCoil",

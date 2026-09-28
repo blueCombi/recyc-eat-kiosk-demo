@@ -38,7 +38,7 @@
         <p class="accept-gain">+<span id="gainValue">5</span> points!</p>
       </div>
 
-      <button type="button" class="kiosk-ring points-ring" id="pointsRing" aria-label="Add points for this item">
+      <div class="kiosk-ring points-ring">
         <span class="kiosk-ring__orbit" aria-hidden="true">
           <span></span><span></span><span></span><span></span>
           <span></span><span></span><span></span><span></span>
@@ -50,15 +50,16 @@
             <span id="totalPoints">0</span><span class="star" aria-hidden="true">&#9733;</span>
           </span>
         </span>
-      </button>
+      </div>
 
-      <button type="button" class="item-toggle" id="itemToggle"
-        aria-label="Change accepted item, double tap to reject the item">
+      <div class="item-toggle item-chip" id="itemChip" hidden>
         <span class="item-toggle__art">
           <img src="../images/bottle.png" alt="Small plastic bottle" id="itemIcon">
         </span>
         <span class="item-toggle__label" id="itemBadge">Small Plastic Bottle</span>
-      </button>
+      </div>
+
+      <p class="accept-bin-status" id="binStatus" role="status" aria-live="polite">Insert your next item.</p>
 
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
         <span id="finishLabel">FINISH</span> <span aria-hidden="true">&check;</span>
@@ -68,7 +69,7 @@
 
   <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span id="kioskHint">Tap the ring for each item you insert. Tap FINISH when you want to pick a reward.</span>
+    <span id="kioskHint">Keep inserting items to earn more. Tap FINISH when you want to pick a reward.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -77,34 +78,25 @@
     import { POINTS, createVoucher, addPoints, scanVoucher } from '../js/firebase-config.js';
     import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
     import { getMinRewardCost } from '../js/food-inventory-data.js';
+    import { itemTypeByKey, itemTypeFor } from '../js/item-types.js';
+    import { connectBin } from '../js/hardware-client.js';
 
-    function itemCatalog() {
-      return [
-        { key: "small_bottle", label: "Small Plastic Bottle", pts: POINTS.small_bottle, img: "../images/bottle.png",  alt: "Small plastic bottle" },
-        { key: "big_bottle",   label: "Big Plastic Bottle",   pts: POINTS.big_bottle,   img: "../images/bottle.png",  alt: "Big plastic bottle"   },
-        { key: "aluminum_can", label: "Aluminum Can",          pts: POINTS.aluminum_can, img: "../images/can.png",     alt: "Aluminum can"         },
-      ];
-    }
-
-    // rebuilt after live settings load so admin point values actually apply
-    let ITEM_TYPES = itemCatalog();
-
-    let itemIndex    = 0;
     let totalPoints  = 0;
     let sessionItems = [];   // track items inserted this session
     let voucherID    = sessionStorage.getItem("voucherID") || null;
     let redirecting  = false;
+    let bin          = null;
 
     const totalEl   = document.getElementById("totalPoints");
     const gainEl    = document.getElementById("gainValue");
     const status    = document.getElementById("acceptStatus");
     const statusTitle = document.getElementById("acceptTitle");
-    const ring      = document.getElementById("pointsRing");
     const finishBtn = document.getElementById("btnFinish");
     const finishLabel = document.getElementById("finishLabel");
-    const itemToggle= document.getElementById("itemToggle");
+    const itemChip  = document.getElementById("itemChip");
     const itemIcon  = document.getElementById("itemIcon");
     const itemBadge = document.getElementById("itemBadge");
+    const binStatus = document.getElementById("binStatus");
 
     // ── render ────────────────────────────────────────────────────
     function render(total, gain) {
@@ -120,23 +112,39 @@
       statusTitle.textContent = "Item Accepted!";
     }
 
-    function updateItemUI() {
-      const item      = ITEM_TYPES[itemIndex];
-      itemIcon.src    = item.img;
-      itemIcon.alt    = item.alt;
-      itemBadge.textContent = item.label;
-      gainEl.textContent    = item.pts;
+    function setBinStatus(message, isError) {
+      binStatus.textContent = message;
+      binStatus.classList.toggle("is-error", !!isError);
     }
+
+    // The chip reports the item the bin just took, so it stays hidden until one
+    // actually goes in.
+    function showItem(type, points) {
+      itemIcon.src    = type.img;
+      itemIcon.alt    = type.alt;
+      itemBadge.textContent = type.label;
+      gainEl.textContent    = points;
+      itemChip.hidden = false;
+    }
+
+    // A Firestore write does not fail when the kiosk loses internet — it stays
+    // pending until the connection returns. Waiting on it forever would strand
+    // the shopper here with points they cannot spend, so FINISH moves on either
+    // way: the running total lives in sessionStorage, and Redeem and Print both
+    // reconcile the receipt once the network is back.
+    const SAVE_WAIT_MS = 4000;
 
     // Points keep counting until they tap FINISH. Do not jump to Redeem
     // automatically — they may want a pricier coil.
     function goAfterWrites(url) {
-      lastWrite.then(() => {
+      Promise.race([
+        lastWrite,
+        new Promise((resolve) => setTimeout(resolve, SAVE_WAIT_MS)),
+      ]).catch((err) => {
+        console.error("Points will sync once reconnected:", err);
+      }).then(() => {
+        bin?.close();
         window.location.href = url;
-      }).catch((err) => {
-        console.error("Could not save points before leaving:", err);
-        redirecting = false;
-        if (finishBtn) finishBtn.disabled = false;
       });
     }
 
@@ -158,9 +166,8 @@
       } catch (err) {
         console.error("Using settings threshold:", err);
       }
-      ITEM_TYPES = itemCatalog();
       document.getElementById("kioskHint").textContent =
-        `Tap the ring for each item. Tap FINISH when you want to pick a reward (from ${POINTS.threshold} points).`;
+        `Keep inserting items to earn more. Tap FINISH when you want to pick a reward (from ${POINTS.threshold} points).`;
 
       // if returning user scanned a QR, load from Firebase
       const returnID = sessionStorage.getItem("returnVoucherID");
@@ -176,15 +183,34 @@
         totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0");
       }
 
-      render(totalPoints, ITEM_TYPES[0].pts);
+      render(totalPoints, 0);
       updateFinishLabel(totalPoints);
 
-      // insert.html sends ?award=1 to mean "an item just went in". Drop the
-      // parameter first so a page refresh cannot award it twice.
+      // insert.html hands the accepted item over in sessionStorage and sends
+      // ?award=1. Drop both first so a page refresh cannot award it twice.
       if (new URLSearchParams(location.search).has("award")) {
         history.replaceState(null, "", location.pathname);
-        handleAddPoints();
+        awardPendingInsert();
       }
+
+      // Only connect once the live point values are in, so an item inserted a
+      // second after this screen opens is never paid at the default rate.
+      listenToBin();
+    }
+
+    function awardPendingInsert() {
+      let pending = null;
+      try {
+        pending = JSON.parse(sessionStorage.getItem("pendingInsert") || "null");
+      } catch {
+        pending = null;
+      }
+      sessionStorage.removeItem("pendingInsert");
+      if (!pending) return;
+
+      const type = itemTypeByKey(pending.key)
+        || itemTypeFor(pending.material, pending.size);
+      if (type) handleAddPoints(type, pending.weight);
     }
 
     // Firestore writes run one at a time. Tapping faster than the network
@@ -199,21 +225,29 @@
     }
 
     // ── add points + save to Firebase ────────────────────────────
-    function handleAddPoints() {
-      if (redirecting) return;
-      const item = ITEM_TYPES[itemIndex];
-      totalPoints += item.pts;
+    function handleAddPoints(type, weight) {
+      if (redirecting || !type) return;
+      const points = Number(POINTS[type.key]) || 0;
+      totalPoints += points;
 
       // what this one insert added, for the Firebase session log
-      const inserted = { type: item.key, label: item.label, quantity: 1, points: item.pts };
+      const inserted = {
+        type: type.key,
+        label: type.label,
+        quantity: 1,
+        points,
+        grams: Number.isFinite(weight) ? weight : null,
+      };
 
       // running tally for the receipt screen
-      const existing = sessionItems.find(i => i.type === item.key);
-      if (existing) { existing.quantity++; existing.points += item.pts; }
+      const existing = sessionItems.find(i => i.type === type.key);
+      if (existing) { existing.quantity++; existing.points += points; }
       else          { sessionItems.push({ ...inserted }); }
 
-      render(totalPoints, item.pts);
+      render(totalPoints, points);
+      showItem(type, points);
       announceAccepted();
+      setBinStatus("Insert your next item, or tap FINISH.");
       updateFinishLabel(totalPoints);
       sessionStorage.setItem("totalPoints", totalPoints);
       // the receipt screen reads this back to list what was inserted
@@ -223,41 +257,68 @@
 
       queueWrite(async () => {
         if (!voucherID) {
-          voucherID = await createVoucher([inserted], runningTotal, item.pts);
+          voucherID = await createVoucher([inserted], runningTotal, points);
           sessionStorage.setItem("voucherID", voucherID);
         } else {
-          await addPoints(voucherID, [inserted], item.pts);
+          await addPoints(voucherID, [inserted], points);
         }
       });
     }
 
-    // ── events ────────────────────────────────────────────────────
-    ring.addEventListener("click", handleAddPoints);
+    // ── the bin keeps the session going ───────────────────────────
+    // Shoppers stay on this screen and keep feeding the machine; each accepted
+    // item lands here, and a returned one takes them to the rejection screen
+    // with their points intact.
+    function listenToBin() {
+      bin = connectBin({
+        onStatus(message) {
+          if (redirecting) return;
+          if (!message.bin.connected) {
+            setBinStatus("Bin is offline — tap FINISH to keep your points.", true);
+            return;
+          }
+          setBinStatus(message.bin.state === "busy"
+            ? "Sorting the last item — one moment..."
+            : "Insert your next item, or tap FINISH.");
+        },
 
-    // Single tap on the item switches type and awards it; double tap sends the
-    // item back. The timer lets us tell the two apart, since a double click
-    // also fires two click events.
-    let singleTapTimer = null;
+        onDetect(message) {
+          if (redirecting) return;
+          const grams = message.weight ? ` (${message.weight} g)` : "";
+          setBinStatus(`Checking your item${grams}...`);
+        },
 
-    itemToggle.addEventListener("click", function () {
-      if (redirecting || singleTapTimer) return;
+        onItem(message) {
+          if (redirecting) return;
+          const type = itemTypeFor(message.material, message.size);
+          if (!type) {
+            leaveTo("itemrejected.html?reason=UNKNOWN_ITEM");
+            return;
+          }
+          handleAddPoints(type, message.weight);
+        },
 
-      singleTapTimer = setTimeout(function () {
-        singleTapTimer = null;
-        itemIndex = (itemIndex + 1) % ITEM_TYPES.length;
-        updateItemUI();
-        handleAddPoints();
-      }, 260);
-    });
+        onReject(message) {
+          if (redirecting) return;
+          leaveTo(`itemrejected.html?reason=${encodeURIComponent(message.reason || "UNKNOWN_ITEM")}`);
+        },
 
-    itemToggle.addEventListener("dblclick", function () {
+        onOffline() {
+          if (redirecting) return;
+          setBinStatus("Waiting for the kiosk hardware...", true);
+        },
+      });
+    }
+
+    function leaveTo(url) {
       if (redirecting) return;
-      clearTimeout(singleTapTimer);
-      singleTapTimer = null;
       redirecting = true;
       sessionStorage.setItem("totalPoints", totalPoints);
-      window.location.href = "itemrejected.html";
-    });
+      goAfterWrites(url);
+    }
+
+    // ── events ────────────────────────────────────────────────────
+    window.addEventListener("pagehide", () => bin?.close());
 
     finishBtn.addEventListener("click", function (e) {
       e.preventDefault();
