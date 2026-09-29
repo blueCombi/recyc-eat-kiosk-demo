@@ -59,7 +59,13 @@
         <span class="item-toggle__label" id="itemBadge">Small Plastic Bottle</span>
       </div>
 
-      <p class="accept-bin-status" id="binStatus" role="status" aria-live="polite">Insert your next item.</p>
+      <p class="accept-bin-status" id="binStatus" role="status" aria-live="polite">You can drop the next bottle.</p>
+
+      <div class="processing" id="processing" hidden>
+        <span class="processing__spin" aria-hidden="true"></span>
+        <p class="processing__title">Processing your item</p>
+        <p class="processing__sub">Compressing, then dropping it into the bin. Please wait.</p>
+      </div>
 
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
         <span id="finishLabel">FINISH</span> <span aria-hidden="true">&check;</span>
@@ -69,7 +75,7 @@
 
   <footer class="kiosk-info">
     <span class="info-icon" aria-hidden="true">i</span>
-    <span id="kioskHint">Keep inserting items to earn more. Tap FINISH when you want to pick a reward.</span>
+    <span id="kioskHint">Wait until the machine finishes dropping the item before you insert another.</span>
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
@@ -86,6 +92,8 @@
     let voucherID    = sessionStorage.getItem("voucherID") || null;
     let redirecting  = false;
     let bin          = null;
+    let dropping     = false;
+    let dropTimer    = null;
 
     const totalEl   = document.getElementById("totalPoints");
     const gainEl    = document.getElementById("gainValue");
@@ -115,6 +123,25 @@
     function setBinStatus(message, isError) {
       binStatus.textContent = message;
       binStatus.classList.toggle("is-error", !!isError);
+    }
+
+    const processingEl = document.getElementById("processing");
+
+    function showProcessing() {
+      dropping = true;
+      processingEl.hidden = false;
+      setBinStatus("Please wait — do not drop another bottle yet.");
+      clearTimeout(dropTimer);
+      dropTimer = setTimeout(() => {
+        if (dropping) showReadyForNext();
+      }, 25000);
+    }
+
+    function showReadyForNext() {
+      dropping = false;
+      clearTimeout(dropTimer);
+      processingEl.hidden = true;
+      setBinStatus("You can drop the next bottle, or tap FINISH.");
     }
 
     // The chip reports the item the bin just took, so it stays hidden until one
@@ -167,7 +194,7 @@
         console.error("Using settings threshold:", err);
       }
       document.getElementById("kioskHint").textContent =
-        `Keep inserting items to earn more. Tap FINISH when you want to pick a reward (from ${POINTS.threshold} points).`;
+        `Wait until the machine finishes dropping the item. Then you can add another, or tap FINISH (from ${POINTS.threshold} points).`;
 
       // if returning user scanned a QR, load from Firebase
       const returnID = sessionStorage.getItem("returnVoucherID");
@@ -210,7 +237,8 @@
 
       const type = itemTypeByKey(pending.key)
         || itemTypeFor(pending.material, pending.size);
-      if (type) handleAddPoints(type, pending.weight);
+      // insert.html only sends the shopper here after the servo has dropped the item.
+      if (type) handleAddPoints(type, pending.weight, true);
     }
 
     // Firestore writes run one at a time. Tapping faster than the network
@@ -225,7 +253,7 @@
     }
 
     // ── add points + save to Firebase ────────────────────────────
-    function handleAddPoints(type, weight) {
+    function handleAddPoints(type, weight, alreadyDropped) {
       if (redirecting || !type) return;
       const points = Number(POINTS[type.key]) || 0;
       totalPoints += points;
@@ -247,7 +275,8 @@
       render(totalPoints, points);
       showItem(type, points);
       announceAccepted();
-      setBinStatus("Insert your next item, or tap FINISH.");
+      if (alreadyDropped) showReadyForNext();
+      else showProcessing();
       updateFinishLabel(totalPoints);
       sessionStorage.setItem("totalPoints", totalPoints);
       // the receipt screen reads this back to list what was inserted
@@ -272,14 +301,12 @@
     function listenToBin() {
       bin = connectBin({
         onStatus(message) {
-          if (redirecting) return;
+          if (redirecting || dropping) return;
           if (!message.bin.connected) {
             setBinStatus("Bin is offline — tap FINISH to keep your points.", true);
             return;
           }
-          setBinStatus(message.bin.state === "busy"
-            ? "Sorting the last item — one moment..."
-            : "Insert your next item, or tap FINISH.");
+          setBinStatus("You can drop the next bottle, or tap FINISH.");
         },
 
         onDetect(message) {
@@ -296,6 +323,11 @@
             return;
           }
           handleAddPoints(type, message.weight);
+        },
+
+        onSorted() {
+          if (redirecting || !dropping) return;
+          showReadyForNext();
         },
 
         onReject(message) {

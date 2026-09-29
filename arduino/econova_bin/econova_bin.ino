@@ -225,6 +225,7 @@ void runCompressor(int motorPin, Servo &servo, const char *material)
   waitMs(500);
 
   sweepServo(servo);
+  // The kiosk waits on this line before it tells the shopper to drop another item.
   sendSorted(material);
 }
 
