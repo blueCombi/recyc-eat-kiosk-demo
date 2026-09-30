@@ -188,7 +188,7 @@ float readWeight(byte samples)
 void triggerODD(int pin)
 {
   digitalWrite(pin, LOW);
-  waitMs(500);
+  waitMs(1000);
   digitalWrite(pin, HIGH);
 }
 
@@ -229,11 +229,20 @@ void runCompressor(int motorPin, Servo &servo, const char *material)
   sendSorted(material);
 }
 
-// Blocks until the platform is clear again, then re-zeros so drift from the
-// last item does not count towards the next one.
+void goReady()
+{
+  waitMs(500);
+  scale.tare();
+  sendEvent("READY");
+}
+
+// After a reject the item is still on the platform. Wait for it to leave,
+// then re-zero. Do not wait forever: a stuck scale would lock the kiosk.
 void waitForRemovalAndReset()
 {
-  while (true)
+  const unsigned long limit = millis() + 15000;
+
+  while (millis() < limit)
   {
     pollHost();
 
@@ -243,9 +252,7 @@ void waitForRemovalAndReset()
     delay(50);
   }
 
-  waitMs(500);
-  scale.tare();
-  sendEvent("READY");
+  goReady();
 }
 
 void rejectItem(const char *reason, float weight)
@@ -382,5 +389,7 @@ void loop()
     runCompressor(PLASTIC_FORWARD, plasticServo, "PLASTIC");
   }
 
-  waitForRemovalAndReset();
+  // The item has already been dumped. Waiting for an empty scale here left
+  // the kiosk on "busy" whenever the load cell still read a few grams.
+  goReady();
 }
