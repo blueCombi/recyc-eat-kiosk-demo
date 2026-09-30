@@ -169,10 +169,10 @@
       loadCoilInventory,
       saveCoilCatalog,
     } from "../js/food-inventory-data.js";
-    import { ITEM_TYPES } from "../js/item-types.js";
+    import { ITEM_POINT_FIELDS, pointSettingsRows } from "../js/item-types.js";
 
     const fields = [
-      ...ITEM_TYPES.map((item) => item.settingsKey),
+      ...ITEM_POINT_FIELDS,
       "redemptionThreshold",
       "sessionTimeout",
       "lowStockAlert",
@@ -181,13 +181,12 @@
     const toggles = ["kioskOpen", "autoPrint"];
     let coils = DEFAULT_COILS.map((item) => ({ ...item }));
 
-    // Six rows, one per material-and-size pair the bin can report.
     function renderItemPoints() {
-      document.getElementById("itemPointFields").innerHTML = ITEM_TYPES.map((item) => `
+      document.getElementById("itemPointFields").innerHTML = pointSettingsRows().map((item) => `
         <div class="setting-row">
           <div class="setting-copy">
             <h3>${item.label}</h3>
-            <p>Bin reports ${item.material} at ${item.size} size.</p>
+            <p>${item.detail}</p>
           </div>
           <div class="setting-control">
             <input class="input" type="number" min="1" max="50" id="${item.settingsKey}" required />

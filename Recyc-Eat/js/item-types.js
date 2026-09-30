@@ -40,7 +40,9 @@ export const ITEM_TYPES = [
     material: "CAN",
     size: "SMALL",
     label: "Small Aluminum Can",
-    settingsKey: "pointsCanSmall",
+    settingsKey: "pointsCan",
+    settingsLabel: "Aluminum Can",
+    settingsDetail: "Any size.",
     points: 7,
     img: "../images/can.png",
     alt: "Small aluminum can",
@@ -50,7 +52,7 @@ export const ITEM_TYPES = [
     material: "CAN",
     size: "MEDIUM",
     label: "Medium Aluminum Can",
-    settingsKey: "pointsCanMedium",
+    settingsKey: "pointsCan",
     points: 7,
     img: "../images/can.png",
     alt: "Medium aluminum can",
@@ -60,14 +62,31 @@ export const ITEM_TYPES = [
     material: "CAN",
     size: "LARGE",
     label: "Large Aluminum Can",
-    settingsKey: "pointsCanLarge",
+    settingsKey: "pointsCan",
     points: 7,
     img: "../images/canwitname.png",
     alt: "Large aluminum can",
   },
 ];
 
-export const ITEM_POINT_FIELDS = ITEM_TYPES.map((item) => item.settingsKey);
+export const ITEM_POINT_FIELDS = [...new Set(ITEM_TYPES.map((item) => item.settingsKey))];
+
+// One admin row per point value. Cans share a single field for every size.
+export function pointSettingsRows() {
+  const seen = new Set();
+  const rows = [];
+  ITEM_TYPES.forEach((item) => {
+    if (seen.has(item.settingsKey)) return;
+    seen.add(item.settingsKey);
+    rows.push({
+      settingsKey: item.settingsKey,
+      label: item.settingsLabel || item.label,
+      detail: item.settingsDetail || `Bin reports ${item.material} at ${item.size} size.`,
+      points: item.points,
+    });
+  });
+  return rows;
+}
 
 export const DEFAULT_ITEM_POINTS = ITEM_TYPES.reduce((points, item) => {
   points[item.key] = item.points;

@@ -92,6 +92,15 @@ export function sanitizeSettings(raw) {
     next.availableRewards = DEFAULT_SETTINGS.availableRewards;
   }
 
+  const canSizeFields = ["pointsCanSmall", "pointsCanMedium", "pointsCanLarge"];
+  if (!(Number(next.pointsCan) > 0)) {
+    const carried = canSizeFields.map((field) => Number(next[field])).find((n) => n > 0);
+    if (carried) next.pointsCan = carried;
+  }
+  canSizeFields.forEach((field) => {
+    delete next[field];
+  });
+
   // The old field names are not written back, so a saved doc drops them.
   Object.values(LEGACY_POINT_FIELDS).forEach((legacyField) => {
     delete next[legacyField];
