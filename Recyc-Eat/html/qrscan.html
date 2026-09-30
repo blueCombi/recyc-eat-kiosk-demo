@@ -150,6 +150,7 @@
   <script type="module">
     import { scanVoucher } from '../js/firebase-config.js';
     import { markReturnVisit } from '../js/kiosk-session.js';
+    import { getHardwareBase } from '../js/hardware-client.js';
 
     const DOTS = '<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
     // USB 2D scanners type like a keyboard (HID wedge). Characters arrive in a
@@ -335,16 +336,52 @@
       rafId = requestAnimationFrame(tick);
     }
 
+    function connectUsbScanner() {
+      if (location.protocol === "https:") return;
+
+      let socket = null;
+      let retry = null;
+      const open = () => {
+        try {
+          socket = new WebSocket(`${getHardwareBase().replace(/^http/, "ws")}/ws/scanner`);
+        } catch {
+          retry = setTimeout(open, 1500);
+          return;
+        }
+        socket.addEventListener("message", (event) => {
+          let message = null;
+          try {
+            message = JSON.parse(event.data);
+          } catch {
+            return;
+          }
+          if (message.type === "scan" && message.text) {
+            statusText.textContent = "QR found!";
+            loadVoucher(message.text);
+          }
+        });
+        socket.addEventListener("close", () => {
+          retry = setTimeout(open, 1500);
+        });
+        socket.addEventListener("error", () => {});
+      };
+      open();
+      window.addEventListener("pagehide", () => {
+        clearTimeout(retry);
+        try { socket?.close(); } catch { /* already gone */ }
+      });
+    }
+
     async function startCamera() {
       if (!navigator.mediaDevices?.getUserMedia) {
-        statusText.textContent = "Camera unavailable — type the receipt ID below.";
+        statusText.textContent = "Use the USB scanner, or type the receipt ID.";
         return;
       }
 
-      // Camera needs https (or localhost). file:// is blocked by the browser.
+      // Camera needs https (or localhost). The Pi kiosk is plain http, so the
+      // browser blocks getUserMedia there. USB scanner and the ID box still work.
       if (!window.isSecureContext && location.protocol !== "https:") {
-        statusText.textContent = "Open this page over HTTPS (or localhost) to use the camera, or type the ID.";
-        showError("Camera needs a secure page. On Hostinger this is automatic over https.");
+        statusText.textContent = "Use the USB scanner, or type the receipt ID.";
         return;
       }
 
@@ -433,6 +470,7 @@
     });
 
     window.addEventListener("pagehide", stopCamera);
+    connectUsbScanner();
     startCamera();
   </script>
 </body>
