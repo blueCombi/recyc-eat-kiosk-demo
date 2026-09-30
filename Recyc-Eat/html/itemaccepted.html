@@ -63,8 +63,8 @@
 
       <div class="processing" id="processing" hidden>
         <span class="processing__spin" aria-hidden="true"></span>
-        <p class="processing__title">Processing your item</p>
-        <p class="processing__sub">Compressing, then dropping it into the bin. Please wait.</p>
+        <p class="processing__title">Please wait</p>
+        <p class="processing__sub">Compression is running. Don't insert another item yet.</p>
       </div>
 
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
@@ -130,7 +130,7 @@
     function showProcessing() {
       dropping = true;
       processingEl.hidden = false;
-      setBinStatus("Please wait — do not drop another bottle yet.");
+      setBinStatus("Please wait. Compression is still running.");
       clearTimeout(dropTimer);
       dropTimer = setTimeout(() => {
         if (dropping) showReadyForNext();
@@ -237,8 +237,9 @@
 
       const type = itemTypeByKey(pending.key)
         || itemTypeFor(pending.material, pending.size);
-      // insert.html only sends the shopper here after the servo has dropped the item.
-      if (type) handleAddPoints(type, pending.weight, true);
+      // Sensors already accepted it. Please wait stays up until the compressor
+      // and servo finish and the bin sends SORTED.
+      if (type) handleAddPoints(type, pending.weight, false);
     }
 
     // Firestore writes run one at a time. Tapping faster than the network

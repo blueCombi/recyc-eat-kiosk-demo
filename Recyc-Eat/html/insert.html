@@ -52,12 +52,6 @@
 
       <p class="insert-status" id="waitingText" role="status" aria-live="polite">Waiting for Item...</p>
 
-      <div class="processing" id="processing" hidden>
-        <span class="processing__spin" aria-hidden="true"></span>
-        <p class="processing__title">Processing your item</p>
-        <p class="processing__sub">Compressing, then dropping it into the bin. Please wait.</p>
-      </div>
-
       <a href="recycling.html" class="kiosk-btn kiosk-btn--ghost" id="cancelVisit" role="button">
         CANCEL <span aria-hidden="true">&#10005;</span>
       </a>
@@ -144,8 +138,6 @@
     // there is nothing to tap here: the bin either takes the item or returns it.
     let leaving = false;
     let bin = null;
-    let dropping = false;
-    let dropTimer = null;
 
     function goTo(url) {
       if (leaving) return;
@@ -154,23 +146,9 @@
       window.location.href = url;
     }
 
-    function showProcessing() {
-      dropping = true;
-      document.getElementById("processing").hidden = false;
-      document.querySelector(".insert-ring").hidden = true;
-      document.getElementById("cancelVisit").hidden = true;
-      setStatus("Please wait — do not insert another item yet.", false, 60000);
-      clearTimeout(dropTimer);
-      // Compressor plus servo is about 12s. This only moves on if that
-      // "dropped" signal never arrives.
-      dropTimer = setTimeout(() => {
-        if (dropping) goTo("itemaccepted.html?award=1");
-      }, 25000);
-    }
-
     bin = connectBin({
       onStatus(message) {
-        if (leaving || dropping || Date.now() < statusHeldUntil) return;
+        if (leaving || Date.now() < statusHeldUntil) return;
         if (!message.bin.connected) {
           setStatus("Bin is offline — please ask our staff.", true);
           return;
@@ -203,14 +181,9 @@
           weight: message.weight,
           at: message.at,
         }));
-        // Stay here until EVT|SORTED. That line is sent after the compressor
-        // stops and the servo has flipped the item into the bin.
-        showProcessing();
-      },
-
-      onSorted() {
-        if (!dropping) return;
-        clearTimeout(dropTimer);
+        // Item Accepted shows immediately. That screen asks them to wait
+        // until the compressor and servo finish.
+        setStatus("Item accepted!", false, 4000);
         goTo("itemaccepted.html?award=1");
       },
 
