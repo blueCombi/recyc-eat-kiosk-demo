@@ -42,6 +42,20 @@
 
 .accept-status.is-idle .accept-gain { visibility: hidden; }
 
+/* after the drop: ask for the next bottle, keep the points they just earned */
+.accept-status.is-insert .accept-check {
+  background: var(--teal-100);
+  color: var(--teal-700);
+  box-shadow: none;
+}
+
+.accept-status.is-insert .accept-title { color: var(--teal-700); }
+
+/* compression: the heading is the wait message, the spinner sits below */
+.accept-status.is-wait .accept-check { display: none; }
+
+.accept-status.is-wait .accept-title { color: var(--teal-700); }
+
 /* ===== POINTS RING =====
    The ring and the total inside it are shared components; this only
    sizes the ring down for a screen that stacks more content. */

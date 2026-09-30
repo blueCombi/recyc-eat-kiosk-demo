@@ -63,8 +63,7 @@
 
       <div class="processing" id="processing" hidden>
         <span class="processing__spin" aria-hidden="true"></span>
-        <p class="processing__title">Please wait</p>
-        <p class="processing__sub">Compression is running. Don't insert another item yet.</p>
+        <p class="processing__sub">Don't insert another item until this finishes.</p>
       </div>
 
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
@@ -115,9 +114,15 @@
       totalEl.parentElement.classList.add("pop");
     }
 
+    function setHeading(mode, title) {
+      status.classList.toggle("is-idle", mode === "idle");
+      status.classList.toggle("is-insert", mode === "insert");
+      status.classList.toggle("is-wait", mode === "wait");
+      statusTitle.textContent = title;
+    }
+
     function announceAccepted() {
-      status.classList.remove("is-idle");
-      statusTitle.textContent = "Item Accepted!";
+      setHeading("accepted", "Item Accepted!");
     }
 
     function setBinStatus(message, isError) {
@@ -126,22 +131,41 @@
     }
 
     const processingEl = document.getElementById("processing");
+    let acceptHold = null;
+    // Long enough to read "Item Accepted" before the compressor message.
+    // The bin itself waits 5s before the motor starts.
+    const ACCEPTED_HOLD_MS = 2000;
 
     function showProcessing() {
       dropping = true;
       processingEl.hidden = false;
-      setBinStatus("Please wait. Compression is still running.");
+      setHeading("wait", "Please wait");
+      setBinStatus("Processing your item");
       clearTimeout(dropTimer);
       dropTimer = setTimeout(() => {
         if (dropping) showReadyForNext();
       }, 25000);
     }
 
+    function showAcceptedThenProcessing() {
+      dropping = true;
+      processingEl.hidden = true;
+      announceAccepted();
+      setBinStatus("Item accepted.");
+      clearTimeout(acceptHold);
+      clearTimeout(dropTimer);
+      acceptHold = setTimeout(() => {
+        if (dropping) showProcessing();
+      }, ACCEPTED_HOLD_MS);
+    }
+
     function showReadyForNext() {
       dropping = false;
+      clearTimeout(acceptHold);
       clearTimeout(dropTimer);
       processingEl.hidden = true;
-      setBinStatus("You can drop the next bottle, or tap FINISH.");
+      setHeading("insert", "Please insert");
+      setBinStatus("Drop the next bottle, or tap FINISH.");
     }
 
     // The chip reports the item the bin just took, so it stays hidden until one
@@ -237,8 +261,8 @@
 
       const type = itemTypeByKey(pending.key)
         || itemTypeFor(pending.material, pending.size);
-      // Sensors already accepted it. Please wait stays up until the compressor
-      // and servo finish and the bin sends SORTED.
+      // Sensors already accepted it. Show Item Accepted, then Processing,
+      // until the compressor and servo finish and the bin sends SORTED.
       if (type) handleAddPoints(type, pending.weight, false);
     }
 
@@ -275,9 +299,12 @@
 
       render(totalPoints, points);
       showItem(type, points);
-      announceAccepted();
-      if (alreadyDropped) showReadyForNext();
-      else showProcessing();
+      if (alreadyDropped) {
+        announceAccepted();
+        showReadyForNext();
+      } else {
+        showAcceptedThenProcessing();
+      }
       updateFinishLabel(totalPoints);
       sessionStorage.setItem("totalPoints", totalPoints);
       // the receipt screen reads this back to list what was inserted
