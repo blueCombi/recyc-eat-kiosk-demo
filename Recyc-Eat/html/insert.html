@@ -52,6 +52,15 @@
 
       <p class="insert-status" id="waitingText" role="status" aria-live="polite">Waiting for Item...</p>
 
+      <div class="redeem-choice" id="redeemChoice" hidden>
+        <p class="redeem-choice__title">You have <span id="redeemChoicePoints">0</span> points</p>
+        <p class="redeem-choice__sub">Redeem a reward now, or keep inserting.</p>
+        <div class="redeem-choice__actions">
+          <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnRedeem">Redeem</button>
+          <button type="button" class="kiosk-btn kiosk-btn--ghost kiosk-btn--lg" id="btnContinue">Continue</button>
+        </div>
+      </div>
+
       <a href="recycling.html" class="kiosk-btn kiosk-btn--ghost" id="cancelVisit" role="button">
         CANCEL <span aria-hidden="true">&#10005;</span>
       </a>
@@ -66,7 +75,9 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script type="module" src="../js/kiosk-guard.js"></script>
   <script type="module">
-    import { scanVoucher } from '../js/firebase-config.js';
+    import { POINTS, scanVoucher } from '../js/firebase-config.js';
+    import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
+    import { getMinRewardCost } from '../js/food-inventory-data.js';
     import { clearKioskSession, takeReturnVisit } from '../js/kiosk-session.js';
     import { connectBin } from '../js/hardware-client.js';
     import { itemTypeFor } from '../js/item-types.js';
@@ -96,11 +107,43 @@
       clearKioskSession();
     });
 
+    document.getElementById("btnContinue")?.addEventListener("click", () => {
+      document.getElementById("redeemChoice").hidden = true;
+      setStatus("Drop the next bottle or can.", false);
+    });
+
+    document.getElementById("btnRedeem")?.addEventListener("click", () => {
+      goTo("redeemready.html");
+    });
+
     // Returning users arrive here from qrscan.html only. Start Recycling
     // and Cancel drop resumeVisit, so leftover points cannot come back.
+    async function loadOfferPoint() {
+      try {
+        applySettingsToPoints(POINTS, await loadKioskSettings());
+      } catch (err) {
+        console.error("Using default point values:", err);
+      }
+      try {
+        const minCost = await getMinRewardCost();
+        if (minCost > POINTS.threshold) POINTS.threshold = minCost;
+      } catch (err) {
+        console.error("Using settings threshold:", err);
+      }
+    }
+
+    function offerRedeemChoice(total) {
+      if (total < POINTS.threshold) return;
+      document.getElementById("redeemChoicePoints").textContent = String(total);
+      document.getElementById("redeemChoice").hidden = false;
+    }
+
     async function resumeSession() {
+      await loadOfferPoint();
       if (!takeReturnVisit()) {
         sessionStorage.removeItem("returnVoucherID");
+        const stored = parseInt(sessionStorage.getItem("totalPoints") || "0", 10);
+        if (stored >= POINTS.threshold) offerRedeemChoice(stored);
         return;
       }
 
@@ -117,8 +160,12 @@
           sessionStorage.removeItem("returnVoucherID");
           sessionStorage.setItem("voucherID", returnID);
           sessionStorage.setItem("totalPoints", result.total_points);
-          setStatus(`Welcome back! ${result.total_points} points loaded`, false, 2600);
-          resetStatus(2500);
+          setStatus(`Welcome back! ${result.total_points} points loaded`, false);
+          if (result.total_points >= POINTS.threshold) {
+            offerRedeemChoice(result.total_points);
+          } else {
+            resetStatus(2500);
+          }
         } else {
           sessionStorage.removeItem("returnVoucherID");
           setStatus(result.message, true, 3600);
