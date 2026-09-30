@@ -1,8 +1,6 @@
 // item-types.js
-// One table for the six things the bin can accept. The sorting ESP32 reports a
-// material (PLASTIC or CAN) and a size (SMALL, MEDIUM or LARGE); the kiosk
-// labels, the receipt lines and the admin point fields all come from here so
-// the hardware and the app can never drift apart.
+// The bin reports plastic as SMALL / MEDIUM / LARGE, and cans as one class
+// (size ANY). Labels, receipt lines and admin point fields all come from here.
 
 export const ITEM_TYPES = [
   {
@@ -36,36 +34,15 @@ export const ITEM_TYPES = [
     alt: "Large plastic bottle",
   },
   {
-    key: "can_small",
+    key: "aluminum_can",
     material: "CAN",
-    size: "SMALL",
-    label: "Small Aluminum Can",
+    size: "ANY",
+    label: "Aluminum Can",
     settingsKey: "pointsCan",
-    settingsLabel: "Aluminum Can",
     settingsDetail: "Any size.",
     points: 7,
     img: "../images/can.png",
-    alt: "Small aluminum can",
-  },
-  {
-    key: "can_medium",
-    material: "CAN",
-    size: "MEDIUM",
-    label: "Medium Aluminum Can",
-    settingsKey: "pointsCan",
-    points: 7,
-    img: "../images/can.png",
-    alt: "Medium aluminum can",
-  },
-  {
-    key: "can_large",
-    material: "CAN",
-    size: "LARGE",
-    label: "Large Aluminum Can",
-    settingsKey: "pointsCan",
-    points: 7,
-    img: "../images/canwitname.png",
-    alt: "Large aluminum can",
+    alt: "Aluminum can",
   },
 ];
 
@@ -103,6 +80,9 @@ export function itemTypeByKey(key) {
 export function itemTypeFor(material, size) {
   const wantMaterial = String(material || "").trim().toUpperCase();
   const wantSize = String(size || "").trim().toUpperCase();
+  if (wantMaterial === "CAN") {
+    return ITEM_TYPES.find((item) => item.material === "CAN") || null;
+  }
   return (
     ITEM_TYPES.find(
       (item) => item.material === wantMaterial && item.size === wantSize,
@@ -111,11 +91,14 @@ export function itemTypeFor(material, size) {
 }
 
 // Firestore rows written before the bin could tell sizes apart still carry the
-// old three keys. Kept so Items Collected and the receipt can label them.
+// old keys. Kept so Items Collected and the receipt can label them.
 const LEGACY_LABELS = {
   small_bottle: "Small Plastic Bottle",
   big_bottle: "Large Plastic Bottle",
-  aluminum_can: "Medium Aluminum Can",
+  aluminum_can: "Aluminum Can",
+  can_small: "Aluminum Can",
+  can_medium: "Aluminum Can",
+  can_large: "Aluminum Can",
 };
 
 export function labelForKey(key) {

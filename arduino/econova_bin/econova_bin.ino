@@ -20,6 +20,7 @@
     EVT|READY                                       idle, waiting for an item
     EVT|DETECT|weight=12.40                         something landed, settling
     EVT|ACCEPT|material=PLASTIC|size=MEDIUM|weight=24.50
+    EVT|ACCEPT|material=CAN|size=ANY|weight=16.20
     EVT|REJECT|reason=TOO_LIGHT|weight=2.10         also OVERWEIGHT, INVALID_SIZE
     EVT|BUSY                                        compressing and sorting
     EVT|SORTED|material=PLASTIC                     cycle finished
@@ -55,9 +56,10 @@ const float IDLE_GRAMS = 3.0;
 // Caps, straws and scraps weigh less than a real container.
 const float MIN_ITEM_GRAMS = 7.0;
 
-const float MAX_GRAMS_SMALL  = 40.0;
-const float MAX_GRAMS_MEDIUM = 80.0;
-const float MAX_GRAMS_LARGE  = 150.0;
+const float MAX_GRAMS_SMALL  = 25.0;
+const float MAX_GRAMS_MEDIUM = 40.0;
+const float MAX_GRAMS_LARGE  = 60.0;
+const float MAX_GRAMS_CAN    = 30.0;
 
 HX711 scale;
 
@@ -336,6 +338,23 @@ void loop()
   // MATERIAL DETECTION — the inductive sensor pulls low on metal.
   const char *material = digitalRead(CAN_SENSOR) == LOW ? "CAN" : "PLASTIC";
 
+  // Cans are one class. IR height is only for plastic bottles.
+  if (strcmp(material, "CAN") == 0)
+  {
+    if (weight > MAX_GRAMS_CAN)
+    {
+      rejectItem("OVERWEIGHT", weight);
+      return;
+    }
+
+    sendAccept("CAN", "ANY", weight);
+    sendEvent("BUSY");
+    triggerODD(CAN_ODD);
+    runCompressor(CAN_FORWARD, canServo, "CAN");
+    goReady();
+    return;
+  }
+
   int small  = digitalRead(IR_SMALL);
   int medium = digitalRead(IR_MEDIUM);
   int large  = digitalRead(IR_LARGE);
@@ -373,21 +392,10 @@ void loop()
     return;
   }
 
-  // Points are awarded the moment the bin commits to keeping the item, so the
-  // shopper is not left watching a blank screen for the whole sort cycle.
-  sendAccept(material, sizeName, weight);
+  sendAccept("PLASTIC", sizeName, weight);
   sendEvent("BUSY");
-
-  if (strcmp(material, "CAN") == 0)
-  {
-    triggerODD(CAN_ODD);
-    runCompressor(CAN_FORWARD, canServo, "CAN");
-  }
-  else
-  {
-    triggerODD(PLASTIC_ODD);
-    runCompressor(PLASTIC_FORWARD, plasticServo, "PLASTIC");
-  }
+  triggerODD(PLASTIC_ODD);
+  runCompressor(PLASTIC_FORWARD, plasticServo, "PLASTIC");
 
   // The item has already been dumped. Waiting for an empty scale here left
   // the kiosk on "busy" whenever the load cell still read a few grams.

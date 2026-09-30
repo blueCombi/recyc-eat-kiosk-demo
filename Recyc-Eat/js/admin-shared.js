@@ -294,7 +294,7 @@ const AdminData = (() => {
   const defaults = {
     pointsSmallBottle: 5,
     pointsBigBottle: 7,
-    pointsCan: 5,
+    pointsCan: 7,
     redemptionThreshold: 50,
     minRedemption: 30,
     maxRedemption: 150,
