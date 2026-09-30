@@ -12,5 +12,11 @@
     "node-hid": "^3.4.0",
     "serialport": "^13.0.0",
     "ws": "^8.21.3"
+  },
+  "allowScripts": {
+    "node-hid@3.4.0": true,
+    "@serialport/bindings-cpp@13.0.0": true,
+    "@firebase/util@1.15.3": true,
+    "protobufjs@7.6.5": true
   }
 }
