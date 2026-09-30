@@ -12,12 +12,12 @@ const POINT_DEFAULTS = ITEM_TYPES.reduce((fields, item) => {
 
 export const DEFAULT_SETTINGS = {
   ...POINT_DEFAULTS,
-  redemptionThreshold: 50,
+  redemptionThreshold: 40,
   minRedemption: 30,
   maxRedemption: 150,
   rewardMealPoints: 50,
   rewardSnackPoints: 30,
-  availableRewards: "Spaghetti pack\nCanned sardines\nCanned tuna\nCorned beef",
+  availableRewards: "Instant drink sachet\nBiscuits\nCanned sardines\nCanned tuna",
   kioskOpen: true,
   autoPrint: true,
   sessionTimeout: 90,
@@ -66,6 +66,31 @@ export function sanitizeSettings(raw) {
   next.autoPrint = Boolean(next.autoPrint);
   next.availableRewards = String(next.availableRewards || "").trim()
     || DEFAULT_SETTINGS.availableRewards;
+
+  // The previous official matrix. A saved copy of those exact numbers moves
+  // to the current table; any other saved value is an admin edit and stays.
+  const previousPoints = {
+    pointsPlasticSmall: 5,
+    pointsPlasticMedium: 7,
+    pointsPlasticLarge: 10,
+    pointsCanSmall: 5,
+    pointsCanMedium: 7,
+    pointsCanLarge: 10,
+  };
+  const stillPreviousPoints = Object.entries(previousPoints)
+    .every(([field, value]) => Number(next[field]) === value);
+  if (stillPreviousPoints) {
+    Object.entries(POINT_DEFAULTS).forEach(([field, value]) => {
+      next[field] = value;
+    });
+  }
+  const previousRewardLists = [
+    "Spaghetti pack\nCanned sardines\nCanned tuna\nCorned beef",
+    "Instant drink sachet\nCanned sardines\nCanned tuna\nBiscuits",
+  ];
+  if (previousRewardLists.includes(next.availableRewards)) {
+    next.availableRewards = DEFAULT_SETTINGS.availableRewards;
+  }
 
   // The old field names are not written back, so a saved doc drops them.
   Object.values(LEGACY_POINT_FIELDS).forEach((legacyField) => {

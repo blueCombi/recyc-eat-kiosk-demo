@@ -29,7 +29,7 @@ const authReady = setPersistence(auth, browserSessionPersistence)
 // item-types.js. Live admin values overwrite these on every kiosk screen.
 export const POINTS = {
   ...DEFAULT_ITEM_POINTS,
-  threshold: 50,
+  threshold: 40,
 };
 
 // ─── Generate Receipt ID  e.g. EM-20260821-1413-001 ─────────────

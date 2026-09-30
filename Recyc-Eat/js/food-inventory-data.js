@@ -22,11 +22,17 @@ const INVENTORY = collection(db, "food_inventory");
 const LOG = collection(db, "inventory_log");
 
 export const DEFAULT_COILS = [
-  { id: "coil-1", sku: "SPAG-01", name: "Spaghetti pack", coilNumber: 1, qty: 24, capacity: 40, unit: "packs", pointCost: 40 },
-  { id: "coil-2", sku: "SARD-01", name: "Canned sardines", coilNumber: 2, qty: 36, capacity: 50, unit: "cans", pointCost: 50 },
-  { id: "coil-3", sku: "TUNA-01", name: "Canned tuna", coilNumber: 3, qty: 36, capacity: 50, unit: "cans", pointCost: 50 },
-  { id: "coil-4", sku: "BEEF-01", name: "Corned beef", coilNumber: 4, qty: 30, capacity: 40, unit: "cans", pointCost: 55 },
+  { id: "coil-1", sku: "DRINK-01", name: "Instant drink sachet", coilNumber: 1, qty: 24, capacity: 40, unit: "sachets", pointCost: 60 },
+  { id: "coil-2", sku: "BISC-01", name: "Biscuits", coilNumber: 2, qty: 30, capacity: 40, unit: "packs", pointCost: 40 },
+  { id: "coil-3", sku: "SARD-01", name: "Canned sardines", coilNumber: 3, qty: 36, capacity: 50, unit: "cans", pointCost: 100 },
+  { id: "coil-4", sku: "TUNA-01", name: "Canned tuna", coilNumber: 4, qty: 36, capacity: 50, unit: "cans", pointCost: 136 },
 ];
+
+// Older saved menus, matched by SKU. Sardines and tuna move to the last two coils.
+const KNOWN_SKUS = new Set(["SPAG-01", "SARD-01", "TUNA-01", "BEEF-01", "DRINK-01", "BISC-01"]);
+const QTY_FALLBACK_SKU = {
+  "DRINK-01": "SPAG-01",
+};
 
 export function stockStatus(item, lowAt = 15) {
   const qty = Number(item?.qty) || 0;
@@ -126,14 +132,40 @@ export async function ensureDefaultInventory() {
   let writes = 0;
 
   const hasCoils = existing.some((item) => coilOf(item.coilNumber));
-  DEFAULT_COILS.forEach((seed) => {
-    const match = existing.find((item) => coilOf(item.coilNumber) === seed.coilNumber)
-      || existing.find((item) => item.id === seed.id);
-    if (match) return;
-    const qty = hasCoils ? 0 : seed.qty;
-    batch.set(doc(INVENTORY, seed.id), coilPayload({ ...seed, qty }, now));
-    writes += 1;
+  const managed = existing.filter((item) => coilOf(item.coilNumber));
+  const catalogIsKnown = managed.length > 0 && managed.every((item) => KNOWN_SKUS.has(skuKey(item.sku).toUpperCase()));
+  const catalogMatches = DEFAULT_COILS.every((seed) => {
+    const match = existing.find((item) => coilOf(item.coilNumber) === seed.coilNumber);
+    return match
+      && skuKey(match.sku) === skuKey(seed.sku)
+      && String(match.name || "") === seed.name
+      && Number(match.pointCost) === seed.pointCost;
   });
+
+  function qtyFor(seed) {
+    const own = existing.find((item) => skuKey(item.sku) === skuKey(seed.sku));
+    if (own) return Math.max(0, Number(own.qty) || 0);
+    const fallbackSku = QTY_FALLBACK_SKU[seed.sku];
+    const fallback = fallbackSku && existing.find((item) => skuKey(item.sku) === skuKey(fallbackSku));
+    if (fallback) return Math.max(0, Number(fallback.qty) || 0);
+    return hasCoils ? 0 : seed.qty;
+  }
+
+  if (!catalogMatches && (catalogIsKnown || !hasCoils)) {
+    DEFAULT_COILS.forEach((seed) => {
+      batch.set(doc(INVENTORY, seed.id), coilPayload({ ...seed, qty: qtyFor(seed) }, now));
+      writes += 1;
+    });
+  } else {
+    DEFAULT_COILS.forEach((seed) => {
+      const match = existing.find((item) => coilOf(item.coilNumber) === seed.coilNumber)
+        || existing.find((item) => item.id === seed.id);
+      if (match) return;
+      const qty = hasCoils ? 0 : seed.qty;
+      batch.set(doc(INVENTORY, seed.id), coilPayload({ ...seed, qty }, now));
+      writes += 1;
+    });
+  }
 
   existing.forEach((item) => {
     if (coilOf(item.coilNumber)) return;
