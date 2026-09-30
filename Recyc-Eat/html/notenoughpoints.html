@@ -94,7 +94,7 @@
     }
     try {
       const minCost = await getMinRewardCost();
-      if (minCost > 0) POINTS.threshold = Math.min(POINTS.threshold, minCost);
+        if (minCost > POINTS.threshold) POINTS.threshold = minCost;
     } catch (err) {
       console.error("Using settings threshold:", err);
     }

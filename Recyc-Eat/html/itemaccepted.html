@@ -66,6 +66,15 @@
         <p class="processing__sub">Don't insert another item until this finishes.</p>
       </div>
 
+      <div class="redeem-choice" id="redeemChoice" hidden>
+        <p class="redeem-choice__title">You have <span id="redeemChoicePoints">40</span> points</p>
+        <p class="redeem-choice__sub">Redeem a reward now, or keep inserting.</p>
+        <div class="redeem-choice__actions">
+          <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnRedeem">Redeem</button>
+          <button type="button" class="kiosk-btn kiosk-btn--ghost kiosk-btn--lg" id="btnContinue">Continue</button>
+        </div>
+      </div>
+
       <button type="button" class="kiosk-btn kiosk-btn--primary kiosk-btn--lg" id="btnFinish">
         <span id="finishLabel">FINISH</span> <span aria-hidden="true">&check;</span>
       </button>
@@ -99,6 +108,10 @@
     const status    = document.getElementById("acceptStatus");
     const statusTitle = document.getElementById("acceptTitle");
     const finishBtn = document.getElementById("btnFinish");
+    const redeemChoice = document.getElementById("redeemChoice");
+    const btnRedeem = document.getElementById("btnRedeem");
+    const btnContinue = document.getElementById("btnContinue");
+    let declinedChoice = false;
     const finishLabel = document.getElementById("finishLabel");
     const itemChip  = document.getElementById("itemChip");
     const itemIcon  = document.getElementById("itemIcon");
@@ -138,6 +151,7 @@
 
     function showProcessing() {
       dropping = true;
+      hideRedeemChoice();
       processingEl.hidden = false;
       setHeading("wait", "Please wait");
       setBinStatus("Processing your item");
@@ -149,6 +163,7 @@
 
     function showAcceptedThenProcessing() {
       dropping = true;
+      hideRedeemChoice();
       processingEl.hidden = true;
       announceAccepted();
       setBinStatus("Item accepted.");
@@ -159,13 +174,29 @@
       }, ACCEPTED_HOLD_MS);
     }
 
+    function hideRedeemChoice() {
+      redeemChoice.hidden = true;
+      finishBtn.hidden = false;
+    }
+
+    function offerRedeemChoice() {
+      const canAsk = !dropping && !redirecting && totalPoints >= POINTS.threshold && !declinedChoice;
+      redeemChoice.hidden = !canAsk;
+      finishBtn.hidden = canAsk;
+      if (!canAsk) return;
+      document.getElementById("redeemChoicePoints").textContent = String(totalPoints);
+      setBinStatus("Redeem a reward, or keep inserting.");
+    }
+
     function showReadyForNext() {
       dropping = false;
+      declinedChoice = false;
       clearTimeout(acceptHold);
       clearTimeout(dropTimer);
       processingEl.hidden = true;
       setHeading("insert", "Please insert");
       setBinStatus("Drop the next bottle, or tap FINISH.");
+      offerRedeemChoice();
     }
 
     // The chip reports the item the bin just took, so it stays hidden until one
@@ -213,12 +244,12 @@
       }
       try {
         const minCost = await getMinRewardCost();
-        if (minCost > 0) POINTS.threshold = Math.min(POINTS.threshold, minCost);
+        if (minCost > POINTS.threshold) POINTS.threshold = minCost;
       } catch (err) {
         console.error("Using settings threshold:", err);
       }
       document.getElementById("kioskHint").textContent =
-        `Wait until the machine finishes dropping the item. Then you can add another, or tap FINISH (from ${POINTS.threshold} points).`;
+        `Wait until the machine finishes dropping the item. At ${POINTS.threshold} points you can redeem or keep inserting.`;
 
       // if returning user scanned a QR, load from Firebase
       const returnID = sessionStorage.getItem("returnVoucherID");
@@ -236,6 +267,7 @@
 
       render(totalPoints, 0);
       updateFinishLabel(totalPoints);
+      offerRedeemChoice();
 
       // insert.html hands the accepted item over in sessionStorage and sends
       // ?award=1. Drop both first so a page refresh cannot award it twice.
@@ -379,6 +411,23 @@
 
     // ── events ────────────────────────────────────────────────────
     window.addEventListener("pagehide", () => bin?.close());
+
+    btnContinue.addEventListener("click", function () {
+      declinedChoice = true;
+      hideRedeemChoice();
+      setHeading("insert", "Please insert");
+      setBinStatus("Drop the next bottle, or tap FINISH.");
+    });
+
+    btnRedeem.addEventListener("click", function () {
+      if (redirecting) return;
+      finishBtn.disabled = true;
+      btnRedeem.disabled = true;
+      btnContinue.disabled = true;
+      sessionStorage.setItem("totalPoints", totalPoints);
+      redirecting = true;
+      goAfterWrites("redeemready.html");
+    });
 
     finishBtn.addEventListener("click", function (e) {
       e.preventDefault();
