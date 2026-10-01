@@ -60,6 +60,10 @@
           <div class="print-progress__fill"></div>
         </div>
         <p class="print-status__id" id="voucherDisplay"></p>
+        <div class="print-actions" id="printActions" hidden>
+          <button type="button" class="kiosk-btn kiosk-btn--primary" id="retryPrint">Print again</button>
+          <button type="button" class="kiosk-btn kiosk-btn--ghost" id="skipPrint">Continue without paper</button>
+        </div>
       </div>
 
       <aside class="kiosk-card print-notice">
@@ -103,41 +107,17 @@
       window.location.href = "printcomplete.html";
     }
 
-    async function generateAndSave() {
+    function showRetry() {
+      document.getElementById("printActions").hidden = false;
+    }
+
+    function hideRetry() {
+      document.getElementById("printActions").hidden = true;
+    }
+
+    async function sendToPrinter(voucherID, totalPoints, items) {
       const statusText = document.getElementById("statusText");
-      const voucherDisplay = document.getElementById("voucherDisplay");
-
-      let voucherID = sessionStorage.getItem("voucherID");
-      const totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0", 10) || 0;
-      const items = sessionItems();
-
-      if (!voucherID) {
-        voucherID = await createVoucher([], totalPoints);
-        sessionStorage.setItem("voucherID", voucherID);
-      }
-
-      new QRCode(document.getElementById("qrcode"), {
-        text: voucherID,
-        width: 128,
-        height: 128,
-      });
-
-      voucherDisplay.textContent = "Receipt ID: " + voucherID;
-
-      let shouldPrint = DEFAULT_SETTINGS.autoPrint;
-      try {
-        const settings = await loadKioskSettings();
-        shouldPrint = settings.autoPrint !== false;
-      } catch {
-        /* defaults: print */
-      }
-
-      if (!shouldPrint) {
-        statusText.textContent = "Receipt saved. Continuing…";
-        setTimeout(goToComplete, 1200);
-        return;
-      }
-
+      hideRetry();
       statusText.classList.remove("is-error");
       statusText.textContent = "Sending to the thermal printer…";
 
@@ -157,10 +137,54 @@
         const detail = String(err.message || "").trim();
         const offline = /Failed to fetch|NetworkError|Load failed|did not respond|AbortError/i.test(detail);
         statusText.textContent = offline
-          ? "Printer server is off. Your QR is still saved — continuing."
-          : `Couldn't print${detail ? `: ${detail.slice(0, 90)}` : ""}. Your QR is still on the next screen.`;
-        setTimeout(goToComplete, 3200);
+          ? "Printer server is off. Your points are saved — print again after the Pi can open the USB printer."
+          : `Couldn't print${detail ? `: ${detail.slice(0, 90)}` : ""}. Points are saved. Do not refresh — tap Print again.`;
+        showRetry();
       }
+    }
+
+    async function generateAndSave() {
+      const statusText = document.getElementById("statusText");
+      const voucherDisplay = document.getElementById("voucherDisplay");
+
+      let voucherID = sessionStorage.getItem("voucherID");
+      const totalPoints = parseInt(sessionStorage.getItem("totalPoints") || "0", 10) || 0;
+      const items = sessionItems();
+
+      if (!voucherID) {
+        voucherID = await createVoucher([], totalPoints);
+        sessionStorage.setItem("voucherID", voucherID);
+      }
+
+      const qrHost = document.getElementById("qrcode");
+      if (!qrHost.dataset.ready) {
+        new QRCode(qrHost, {
+          text: voucherID,
+          width: 128,
+          height: 128,
+        });
+        qrHost.dataset.ready = "1";
+      }
+
+      voucherDisplay.textContent = "Receipt ID: " + voucherID;
+
+      let shouldPrint = DEFAULT_SETTINGS.autoPrint;
+      try {
+        const settings = await loadKioskSettings();
+        shouldPrint = settings.autoPrint !== false;
+      } catch {
+        /* defaults: print */
+      }
+
+      if (!shouldPrint) {
+        statusText.textContent = "Receipt saved. Continuing…";
+        setTimeout(goToComplete, 1200);
+        return;
+      }
+
+      document.getElementById("retryPrint").onclick = () => sendToPrinter(voucherID, totalPoints, items);
+      document.getElementById("skipPrint").onclick = goToComplete;
+      await sendToPrinter(voucherID, totalPoints, items);
     }
 
     generateAndSave();

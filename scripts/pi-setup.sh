@@ -93,20 +93,24 @@ for group in dialout plugdev lp; do
 done
 
 # escpos-usb talks to the printer through libusb, which needs write access to the
-# raw USB device. Match the USB printer class (07) rather than one model's IDs.
+# raw USB device. Match the USB printer class (07) and the usblp node.
 PRINTER_RULE=/etc/udev/rules.d/60-econova-printer.rules
-if [ -f "$PRINTER_RULE" ]; then
-  echo "  printer udev rule already in place"
-else
-  say "Adding a udev rule for the USB thermal printer"
-  printf '%s\n' \
-    '# EcoNova kiosk: let the plugdev group use a USB class-07 (printer) device,' \
-    '# so the print server does not have to run as root.' \
-    'SUBSYSTEM=="usb", ENV{ID_USB_INTERFACES}=="*:0701*:*", MODE="0660", GROUP="plugdev"' \
-    | sudo tee "$PRINTER_RULE" >/dev/null
-  sudo udevadm control --reload-rules
-  sudo udevadm trigger
+say "Adding a udev rule for the USB thermal printer"
+printf '%s\n' \
+  '# EcoNova kiosk: dedicated machine — open USB devices for the print server.' \
+  'SUBSYSTEM=="usb", MODE="0666"' \
+  'SUBSYSTEM=="usb", ATTR{bDeviceClass}=="07", MODE="0666", GROUP="plugdev"' \
+  'SUBSYSTEM=="usb", ATTRS{bInterfaceClass}=="07", MODE="0666", GROUP="plugdev"' \
+  'KERNEL=="lp[0-9]*", SUBSYSTEM=="usbmisc", MODE="0666", GROUP="lp"' \
+  'KERNEL=="usb/lp[0-9]*", MODE="0666", GROUP="lp"' \
+  | sudo tee "$PRINTER_RULE" >/dev/null
+sudo udevadm control --reload-rules
+sudo udevadm trigger --subsystem-match=usb --action=add || true
+# Current session: chmod whatever is already plugged in.
+if [ -d /dev/usb ]; then
+  sudo chmod 666 /dev/usb/lp* 2>/dev/null || true
 fi
+sudo chmod 666 /dev/bus/usb/*/* 2>/dev/null || true
 
 # ── project dependencies ─────────────────────────────────────────
 # A node_modules copied from Windows holds win32 binaries that will not load

@@ -211,10 +211,10 @@
 
     // Printed QR is the receipt ID; if a URL ever gets encoded, pull EM-… out of it.
     function extractVoucherID(raw) {
-      const text = String(raw || "").trim();
+      const text = String(raw || "").replace(/\s+/g, "").trim();
       if (!text) return "";
-      const match = text.match(RECEIPT_RE);
-      if (match) return match[0].toUpperCase();
+      const match = text.toUpperCase().match(RECEIPT_RE);
+      if (match) return match[0];
       try {
         const url = new URL(text);
         const fromQuery = url.searchParams.get("id") || url.searchParams.get("voucher");
@@ -222,7 +222,7 @@
         const pathTail = url.pathname.split("/").filter(Boolean).pop();
         if (pathTail) return extractVoucherID(pathTail);
       } catch {
-        // not a URL — fall through
+        /* not a URL */
       }
       return text.toUpperCase();
     }
@@ -288,6 +288,15 @@
       statusText.innerHTML = "Loading your points" + DOTS;
       stopCamera();
 
+      if (!RECEIPT_RE.test(voucherID)) {
+        showError("That is not an EcoNova receipt ID. It should look like EM-20261001-0915-001.");
+        statusText.textContent = "Scan failed. Type the ID from the paper.";
+        loading = false;
+        button.disabled = false;
+        startCamera();
+        return;
+      }
+
       try {
         const result = await scanVoucher(voucherID);
 
@@ -298,11 +307,12 @@
           return;
         }
 
-        showError(result.message);
-        statusText.textContent = "Scan failed. Please try again.";
+        showError(`${result.message} Looked up ${voucherID}.`);
+        statusText.textContent = result.message || "Scan failed. Please try again.";
         startCamera();
       } catch (err) {
-        showError("Can't reach the server. Ask a staff member for help.");
+        console.error("scanVoucher failed:", err);
+        showError("Can't reach Firebase. Check the tablet internet, then try again.");
         statusText.textContent = "Scan failed. Please try again.";
         startCamera();
       }

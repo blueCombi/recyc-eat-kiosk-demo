@@ -73,6 +73,10 @@
   <script type="module">
     import { dispenseCoil } from '../js/hardware-client.js';
     import { loadKioskSettings } from '../js/kiosk-settings-data.js';
+    import { captureDispenseFromQuery } from '../js/kiosk-session.js';
+
+    captureDispenseFromQuery();
+    await loadKioskSettings().catch(() => {});
 
     const name = (sessionStorage.getItem("dispenseName") || "reward").trim();
     const coil = Number(sessionStorage.getItem("dispenseCoil") || 0);
@@ -122,7 +126,6 @@
 
     // Walks over to Ready on its own if the bridge never answers at all.
     goWhenDone(20000);
-    await loadKioskSettings().catch(() => {});
     turnCoil(coil);
   </script>
 </body>

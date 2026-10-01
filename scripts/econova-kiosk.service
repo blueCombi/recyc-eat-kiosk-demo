@@ -11,6 +11,9 @@ Wants=network-online.target
 [Service]
 Type=simple
 User=__USER__
+SupplementaryGroups=dialout plugdev lp
+# + runs as root so the service can open the USB printer after a plug-in.
+ExecStartPre=+/bin/sh -c 'chmod 666 /dev/bus/usb/*/* /dev/usb/lp* 2>/dev/null || true'
 WorkingDirectory=__DIR__
 ExecStart=__NODE__ Recyc-Eat/js/server.js
 

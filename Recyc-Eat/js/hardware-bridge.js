@@ -99,7 +99,7 @@ function coilOf(value) {
   return coil >= 1 && coil <= COIL_COUNT ? coil : 0;
 }
 
-function createHardwareBridge({ server, onItem, allowSimulation = false } = {}) {
+function createHardwareBridge({ server, onItem, onBroadcast, allowSimulation = false } = {}) {
   const clients = new Set();
 
   const state = {
@@ -153,6 +153,13 @@ function createHardwareBridge({ server, onItem, allowSimulation = false } = {}) 
     const raw = JSON.stringify(message);
     for (const ws of clients) {
       if (ws.readyState === 1) ws.send(raw);
+    }
+    if (typeof onBroadcast === "function") {
+      try {
+        onBroadcast(message);
+      } catch (err) {
+        console.warn("[hardware] broadcast hook failed:", err.message);
+      }
     }
   }
 

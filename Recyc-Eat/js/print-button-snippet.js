@@ -63,6 +63,17 @@ export async function printReceipt({
     /* Pi URL not saved yet */
   }
 
+  const { usesCloudHardware, sendCloudCommand } = await import("./hardware-cloud.js");
+  if (usesCloudHardware()) {
+    return sendCloudCommand("print", {
+      points: Number(points) || 0,
+      itemsRecycled: Number(itemsRecycled) || countSessionItems(items),
+      items: Array.isArray(items) ? items : [],
+      voucherCode,
+      redeemUrl: redeemUrl || voucherCode,
+    }, 25000);
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRINT_TIMEOUT_MS);
 

@@ -22,6 +22,9 @@ const cors = require("cors");
 const { printVoucher } = require("./print-voucher");
 const { createHardwareBridge } = require("./hardware-bridge");
 const { createScannerBridge } = require("./scanner-bridge");
+const { startHardwareRelay } = require("./hardware-relay");
+
+const relay = startHardwareRelay();
 
 const app = express();
 const ROOT = path.join(__dirname, "..");
@@ -35,6 +38,14 @@ const server = http.createServer(app);
 const hardware = createHardwareBridge({
   server,
   allowSimulation: process.env.ECONOVA_ALLOW_SIM === "1",
+  onBroadcast: (message) => relay.pushEvent(message),
+});
+
+relay.attach({
+  dispense: (coilNumber) => hardware.dispense(coilNumber),
+  tare: () => hardware.tare(),
+  print: (payload) => printVoucher(payload),
+  getStatus: () => hardware.getStatus(),
 });
 
 // Both bridges walk the same COM port list, so let the boards identify

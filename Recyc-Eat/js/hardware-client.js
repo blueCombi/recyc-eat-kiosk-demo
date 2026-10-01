@@ -29,7 +29,7 @@ function servedByKioskHost() {
 }
 
 export function getHardwareBase() {
-  const { origin } = location;
+  const { origin, hostname, protocol } = location;
 
   if (servedByKioskHost()) return origin.replace(/\/+$/, "");
 
@@ -44,7 +44,7 @@ export function getHardwareBase() {
     return `http://${hostname}:${BRIDGE_PORT}`;
   }
 
-  return `http://127.0.0.1:${BRIDGE_PORT}`;
+  return `http://192.168.1.8:${BRIDGE_PORT}`;
 }
 
 export async function ensureHardwareBase() {
@@ -64,6 +64,13 @@ function socketUrl() {
 }
 
 async function postJson(route, body) {
+  const { usesCloudHardware, sendCloudCommand } = await import("./hardware-cloud.js");
+  if (usesCloudHardware()) {
+    if (route === "/api/dispense") return sendCloudCommand("dispense", body);
+    if (route === "/api/bin/tare") return sendCloudCommand("tare", body);
+    if (route === "/api/print") return sendCloudCommand("print", body);
+  }
+
   await ensureHardwareBase();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -94,6 +101,25 @@ async function postJson(route, body) {
 }
 
 export async function getHardwareStatus() {
+  const { usesCloudHardware, listenCloudHardware } = await import("./hardware-cloud.js");
+  if (usesCloudHardware()) {
+    return new Promise((resolve, reject) => {
+      const stop = listenCloudHardware({
+        onStatus(status) {
+          stop();
+          resolve(status);
+        },
+        onOffline(err) {
+          stop();
+          reject(err || new Error("Hardware status is offline."));
+        },
+      });
+      setTimeout(() => {
+        stop();
+        reject(new Error("Hardware status timed out."));
+      }, 8000);
+    });
+  }
   await ensureHardwareBase();
   const response = await fetch(`${getHardwareBase()}/api/hardware/status`);
   if (!response.ok) throw new Error(`Status failed (${response.status})`);
@@ -145,7 +171,23 @@ export function connectBin(handlers = {}) {
   function open() {
     if (closed) return;
 
-    ensureHardwareBase().then(() => {
+    import("./hardware-cloud.js").then(({ usesCloudHardware, listenCloudHardware }) => {
+      if (closed) return;
+      if (usesCloudHardware()) {
+        const stop = listenCloudHardware({
+          onStatus: (payload) => fire("onStatus", payload),
+          onDetect: (payload) => fire("onDetect", payload),
+          onItem: (payload) => fire("onItem", payload),
+          onReject: (payload) => fire("onReject", payload),
+          onSorted: (payload) => fire("onSorted", payload),
+          onDispensing: (payload) => fire("onDispensing", payload),
+          onOffline: (err) => fire("onOffline", err),
+        });
+        socket = { close: stop };
+        return;
+      }
+
+      return ensureHardwareBase().then(() => {
       if (closed) return;
       try {
         socket = new WebSocket(socketUrl());
@@ -180,6 +222,10 @@ export function connectBin(handlers = {}) {
       });
 
       socket.addEventListener("error", () => {});
+      });
+    }).catch((err) => {
+      fire("onOffline", err);
+      retry = setTimeout(open, RECONNECT_MS);
     });
   }
 

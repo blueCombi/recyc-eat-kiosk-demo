@@ -126,6 +126,14 @@
   letter-spacing: 0.3px;
 }
 
+.print-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--sp-2);
+  width: 100%;
+}
+
 .print-progress {
   width: 100%;
   height: 12px;

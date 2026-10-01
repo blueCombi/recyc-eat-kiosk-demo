@@ -39,3 +39,17 @@ export function captureReturnFromQuery() {
   history.replaceState({}, "", page);
   return true;
 }
+
+export function captureDispenseFromQuery() {
+  const params = new URLSearchParams(location.search);
+  const coil = String(params.get("coil") || "").trim();
+  const name = String(params.get("name") || "").trim();
+  const sku = String(params.get("sku") || "").trim();
+  if (!coil && !name && !sku) return false;
+  if (coil) sessionStorage.setItem("dispenseCoil", coil);
+  if (name) sessionStorage.setItem("dispenseName", name);
+  if (sku) sessionStorage.setItem("dispenseSku", sku);
+  const page = location.pathname.split("/").pop() || "dispensingfood.html";
+  history.replaceState({}, "", page);
+  return true;
+}

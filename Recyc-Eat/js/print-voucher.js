@@ -316,6 +316,113 @@ function listPrinterTargets(devices) {
   return found;
 }
 
+function listLinuxLpPaths() {
+  const dir = "/dev/usb";
+  if (!fs.existsSync(dir)) return [];
+  try {
+    return fs.readdirSync(dir)
+      .filter((name) => /^lp\d+$/i.test(name))
+      .map((name) => path.join(dir, name));
+  } catch {
+    return [];
+  }
+}
+
+function sendLinuxLp(bytes) {
+  const paths = listLinuxLpPaths();
+  if (!paths.length) {
+    const err = new Error("NO_LP");
+    err.code = "NO_LP";
+    throw err;
+  }
+  let lastErr;
+  for (const lp of paths) {
+    try {
+      fs.writeFileSync(lp, bytes);
+      return;
+    } catch (err) {
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
+function isAccessError(err) {
+  const code = err && err.code;
+  const msg = String(err && (err.message || err));
+  return code === "EACCES"
+    || code === "EPERM"
+    || /permission denied|LIBUSB_ERROR_ACCESS|errno 13/i.test(msg);
+}
+
+function accessHint(msg) {
+  if (!isAccessError({ message: msg })) return msg;
+  return "The Pi can see the printer but cannot open it (permission denied). Run bash scripts/fix-printer.sh on the Pi, then print again.";
+}
+
+function sendClassicLibUsb(bytes) {
+  const usbApi = require("usb");
+  if (typeof usbApi.getDeviceList !== "function") {
+    throw new Error("USB library mismatch: getDeviceList() is missing.");
+  }
+
+  const devices = usbApi.getDeviceList();
+  let lastErr = new Error("No USB thermal printer found. Plug it in, power it on, then retry.");
+
+  for (const device of devices) {
+    let opened = false;
+    try {
+      device.open();
+      opened = true;
+    } catch (err) {
+      lastErr = err;
+      continue;
+    }
+
+    const interfaces = device.interfaces || [];
+    for (const iface of interfaces) {
+      const ifaceClass = iface.descriptor && iface.descriptor.bInterfaceClass;
+      if (ifaceClass !== PRINTER_CLASS) continue;
+
+      try {
+        if (typeof iface.isKernelDriverActive === "function" && iface.isKernelDriverActive()) {
+          iface.detachKernelDriver();
+        }
+      } catch {
+        /* some hosts do not allow detach; usblp write is the fallback */
+      }
+
+      try {
+        iface.claim();
+      } catch (err) {
+        lastErr = err;
+        continue;
+      }
+
+      const endpoint = (iface.endpoints || []).find((ep) => ep.direction === "out");
+      if (!endpoint) {
+        try { iface.release(); } catch { /* ignore */ }
+        continue;
+      }
+
+      return new Promise((resolve, reject) => {
+        endpoint.transfer(bytes, (err) => {
+          try { iface.release(true, () => { try { device.close(); } catch { /* ignore */ } }); }
+          catch { try { device.close(); } catch { /* ignore */ } }
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+    }
+
+    if (opened) {
+      try { device.close(); } catch { /* ignore */ }
+    }
+  }
+
+  throw lastErr;
+}
+
 async function sendLibUsb(bytes) {
   let usbApi;
   try {
@@ -324,49 +431,51 @@ async function sendLibUsb(bytes) {
     throw new Error(`USB library is not available: ${err.message}`);
   }
 
-  const webusb = usbApi.usb;
-  if (!webusb || typeof webusb.getDevices !== "function") {
-    throw new Error("USB library mismatch: getDevices() is missing.");
-  }
-
-  const devices = await webusb.getDevices();
-  const targets = listPrinterTargets(devices);
-  if (!targets.length) {
-    throw new Error(
-      "No USB thermal printer found. Plug it in, power it on, then retry.",
-    );
-  }
-
-  const { device, config, iface, endpoint } = targets[0];
-  const target = describeUsbTarget(device, iface, targets[0].alternate, endpoint);
-
   try {
-    await device.open();
-    try {
-      await device.selectConfiguration(config.configurationValue);
-    } catch {
-      /* already selected */
+    return await sendClassicLibUsb(bytes);
+  } catch (classicErr) {
+    const webusb = usbApi.usb;
+    if (!webusb || typeof webusb.getDevices !== "function") {
+      throw classicErr;
     }
-    await device.claimInterface(target.interfaceNumber);
-    await device.transferOut(target.endpointNumber, bytes);
-  } catch (err) {
-    const msg = String(err.message || err);
-    if (/incompatible driver/i.test(msg)) {
-      throw new Error(
-        "Windows USB Printing Support is blocking direct USB access. Receipts should use the USBPRINT path instead.",
-      );
+
+    const devices = await webusb.getDevices();
+    const targets = listPrinterTargets(devices);
+    if (!targets.length) {
+      throw classicErr;
     }
-    throw new Error(`Failed to send to the USB printer: ${msg}`);
-  } finally {
+
+    const { device, config, iface, endpoint } = targets[0];
+    const target = describeUsbTarget(device, iface, targets[0].alternate, endpoint);
+
     try {
-      await device.releaseInterface(target.interfaceNumber);
-    } catch {
-      /* ignore */
-    }
-    try {
-      await device.close();
-    } catch {
-      /* ignore */
+      await device.open();
+      try {
+        await device.selectConfiguration(config.configurationValue);
+      } catch {
+        /* already selected */
+      }
+      await device.claimInterface(target.interfaceNumber);
+      await device.transferOut(target.endpointNumber, bytes);
+    } catch (err) {
+      const msg = String(err.message || err);
+      if (/incompatible driver/i.test(msg)) {
+        throw new Error(
+          "Windows USB Printing Support is blocking direct USB access. Receipts should use the USBPRINT path instead.",
+        );
+      }
+      throw new Error(`Failed to send to the USB printer: ${accessHint(msg)}`);
+    } finally {
+      try {
+        await device.releaseInterface(target.interfaceNumber);
+      } catch {
+        /* ignore */
+      }
+      try {
+        await device.close();
+      } catch {
+        /* ignore */
+      }
     }
   }
 }
@@ -374,6 +483,21 @@ async function sendLibUsb(bytes) {
 async function sendToPrinter(bytes) {
   if (process.platform === "win32") {
     return sendWindowsUsbPrint(bytes);
+  }
+  if (process.platform === "linux") {
+    try {
+      sendLinuxLp(bytes);
+      return;
+    } catch (err) {
+      if (err && err.code !== "NO_LP") {
+        try {
+          await sendLibUsb(bytes);
+          return;
+        } catch {
+          throw new Error(`Failed to send to the USB printer: ${accessHint(String(err.message || err))}`);
+        }
+      }
+    }
   }
   return sendLibUsb(bytes);
 }
