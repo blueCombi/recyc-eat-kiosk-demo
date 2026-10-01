@@ -21,6 +21,9 @@ export function getPrintApi() {
 
   const { hostname, port, origin, protocol } = location;
   if (port === PRINT_PORT && protocol.startsWith("http")) return `${origin}/api/print`;
+  if (/\.trycloudflare\.com$/i.test(hostname) && protocol.startsWith("http")) {
+    return `${origin.replace(/\/+$/, "")}/api/print`;
+  }
   if (protocol.startsWith("http") && (
     hostname === "localhost" || hostname === "127.0.0.1"
     || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname)

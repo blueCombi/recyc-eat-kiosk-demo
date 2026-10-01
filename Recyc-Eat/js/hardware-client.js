@@ -21,11 +21,17 @@ function isLanHost(hostname) {
     || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
 }
 
-export function getHardwareBase() {
-  const { hostname, port, origin, protocol } = location;
+function servedByKioskHost() {
+  const { hostname, port, protocol } = location;
+  if (!protocol.startsWith("http")) return false;
+  if (port === BRIDGE_PORT) return true;
+  return /\.trycloudflare\.com$/i.test(hostname);
+}
 
-  // Served by the kiosk server itself.
-  if (port === BRIDGE_PORT && protocol.startsWith("http")) return origin.replace(/\/+$/, "");
+export function getHardwareBase() {
+  const { origin } = location;
+
+  if (servedByKioskHost()) return origin.replace(/\/+$/, "");
 
   try {
     const override = localStorage.getItem("econovaHardwareApi");
