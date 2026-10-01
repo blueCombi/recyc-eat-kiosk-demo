@@ -78,7 +78,7 @@
     import { POINTS, scanVoucher } from '../js/firebase-config.js';
     import { loadKioskSettings, applySettingsToPoints } from '../js/kiosk-settings-data.js';
     import { getMinRewardCost } from '../js/food-inventory-data.js';
-    import { clearKioskSession, takeReturnVisit } from '../js/kiosk-session.js';
+    import { clearKioskSession, captureReturnFromQuery, takeReturnVisit } from '../js/kiosk-session.js';
     import { connectBin } from '../js/hardware-client.js';
     import { itemTypeFor } from '../js/item-types.js';
 
@@ -139,6 +139,7 @@
     }
 
     async function resumeSession() {
+      captureReturnFromQuery();
       await loadOfferPoint();
       if (!takeReturnVisit()) {
         sessionStorage.removeItem("returnVoucherID");

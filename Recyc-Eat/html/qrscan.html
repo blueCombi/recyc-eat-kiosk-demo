@@ -152,6 +152,33 @@
     import { markReturnVisit } from '../js/kiosk-session.js';
     import { getHardwareBase } from '../js/hardware-client.js';
 
+    const CAMERA_QR_PAGE =
+      "https://recyceat.matarix.store/recyc-eat-kiosk-demo/Recyc-Eat/html/qrscan.html";
+
+    function kioskReturnOrigin() {
+      const raw = new URLSearchParams(location.search).get("kiosk") || "";
+      try {
+        const url = new URL(raw);
+        if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+        return url.origin;
+      } catch {
+        return "";
+      }
+    }
+
+    function goToInsert(voucherID, points) {
+      const kiosk = kioskReturnOrigin();
+      if (kiosk) {
+        const q = new URLSearchParams({
+          voucher: voucherID,
+          points: String(points ?? 0),
+        });
+        window.location.replace(`${kiosk}/html/insert.html?${q}`);
+        return;
+      }
+      window.location.replace("insert.html");
+    }
+
     const DOTS = '<span class="dots" aria-hidden="true"><span>.</span><span>.</span><span>.</span></span>';
     // USB 2D scanners type like a keyboard (HID wedge). Characters arrive in a
     // burst, then Enter. Ignore slow typing so staff can still use the manual box.
@@ -267,7 +294,7 @@
         if (result.success) {
           markReturnVisit(voucherID, result.total_points);
           statusText.textContent = `${result.total_points} points found! Taking you to the bin...`;
-          setTimeout(() => { window.location.replace("insert.html"); }, 1200);
+          setTimeout(() => goToInsert(voucherID, result.total_points), 1200);
           return;
         }
 
@@ -470,8 +497,16 @@
     });
 
     window.addEventListener("pagehide", stopCamera);
-    connectUsbScanner();
-    startCamera();
+
+    // The tablet camera needs HTTPS. The Pi pages are http, so send returning
+    // shoppers to Hostinger for the scan, then come back to the Pi insert page.
+    if (!window.isSecureContext && location.protocol !== "https:") {
+      const back = encodeURIComponent(location.origin);
+      window.location.replace(`${CAMERA_QR_PAGE}?kiosk=${back}`);
+    } else {
+      connectUsbScanner();
+      startCamera();
+    }
   </script>
 </body>
 </html>

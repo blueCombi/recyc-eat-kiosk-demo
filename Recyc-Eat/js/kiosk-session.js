@@ -27,3 +27,15 @@ export function takeReturnVisit() {
   sessionStorage.removeItem("resumeVisit");
   return ok;
 }
+
+// HTTPS camera scan on Hostinger comes back to the Pi insert page with these
+// query flags, because sessionStorage does not cross from matarix.store.
+export function captureReturnFromQuery() {
+  const params = new URLSearchParams(location.search);
+  const voucher = String(params.get("voucher") || params.get("id") || "").trim();
+  if (!voucher) return false;
+  markReturnVisit(voucher, params.get("points"));
+  const page = location.pathname.split("/").pop() || "insert.html";
+  history.replaceState({}, "", page);
+  return true;
+}
