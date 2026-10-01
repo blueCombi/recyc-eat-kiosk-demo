@@ -33,13 +33,18 @@
 
 .redeem-choice__title {
   margin: 0;
+  font-family: inherit;
   font-size: var(--text-xl);
   font-weight: 800;
+  line-height: 1.15;
   color: var(--green-600);
 }
 
 .redeem-choice__sub {
   margin: 0;
+  font-family: inherit;
+  font-size: var(--text-lg);
+  font-weight: 500;
   color: var(--muted);
 }
 
