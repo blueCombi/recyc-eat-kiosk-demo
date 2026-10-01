@@ -15,7 +15,18 @@ const REQUEST_TIMEOUT_MS = 25000;
 const RECONNECT_MS = 1500;
 const BRIDGE_PORT = "4000";
 
+function isLanHost(hostname) {
+  return hostname === "localhost"
+    || hostname === "127.0.0.1"
+    || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname);
+}
+
 export function getHardwareBase() {
+  const { hostname, port, origin, protocol } = location;
+
+  // Served by the kiosk server itself.
+  if (port === BRIDGE_PORT && protocol.startsWith("http")) return origin.replace(/\/+$/, "");
+
   try {
     const override = localStorage.getItem("econovaHardwareApi");
     if (override) return override.replace(/\/+$/, "");
@@ -23,17 +34,22 @@ export function getHardwareBase() {
     /* private mode */
   }
 
-  const { hostname, port, origin, protocol } = location;
-
-  // Served by the kiosk server itself, over WiFi or not.
-  if (port === BRIDGE_PORT && protocol.startsWith("http")) return origin;
-
-  // Served by XAMPP on the same machine: same host, the bridge's own port.
-  if (protocol.startsWith("http") && hostname) {
+  if (protocol.startsWith("http") && isLanHost(hostname)) {
     return `http://${hostname}:${BRIDGE_PORT}`;
   }
 
   return `http://127.0.0.1:${BRIDGE_PORT}`;
+}
+
+export async function ensureHardwareBase() {
+  if (location.port === BRIDGE_PORT) return getHardwareBase();
+  try {
+    const { loadKioskSettings } = await import("./kiosk-settings-data.js");
+    await loadKioskSettings();
+  } catch {
+    /* keep localStorage / LAN fallback */
+  }
+  return getHardwareBase();
 }
 
 function socketUrl() {
@@ -42,6 +58,7 @@ function socketUrl() {
 }
 
 async function postJson(route, body) {
+  await ensureHardwareBase();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -71,6 +88,7 @@ async function postJson(route, body) {
 }
 
 export async function getHardwareStatus() {
+  await ensureHardwareBase();
   const response = await fetch(`${getHardwareBase()}/api/hardware/status`);
   if (!response.ok) throw new Error(`Status failed (${response.status})`);
   return response.json();
@@ -121,40 +139,42 @@ export function connectBin(handlers = {}) {
   function open() {
     if (closed) return;
 
-    try {
-      socket = new WebSocket(socketUrl());
-    } catch (err) {
-      fire("onOffline", err);
-      retry = setTimeout(open, RECONNECT_MS);
-      return;
-    }
-
-    socket.addEventListener("message", (event) => {
-      let message = null;
+    ensureHardwareBase().then(() => {
+      if (closed) return;
       try {
-        message = JSON.parse(event.data);
-      } catch {
+        socket = new WebSocket(socketUrl());
+      } catch (err) {
+        fire("onOffline", err);
+        retry = setTimeout(open, RECONNECT_MS);
         return;
       }
-      switch (message.type) {
-        case "status": fire("onStatus", message); break;
-        case "detect": fire("onDetect", message); break;
-        case "item": fire("onItem", message); break;
-        case "reject": fire("onReject", message); break;
-        case "sorted": fire("onSorted", message); break;
-        case "dispensing": fire("onDispensing", message); break;
-        default: break;
-      }
-    });
 
-    socket.addEventListener("close", () => {
-      if (closed) return;
-      fire("onOffline", null);
-      retry = setTimeout(open, RECONNECT_MS);
-    });
+      socket.addEventListener("message", (event) => {
+        let message = null;
+        try {
+          message = JSON.parse(event.data);
+        } catch {
+          return;
+        }
+        switch (message.type) {
+          case "status": fire("onStatus", message); break;
+          case "detect": fire("onDetect", message); break;
+          case "item": fire("onItem", message); break;
+          case "reject": fire("onReject", message); break;
+          case "sorted": fire("onSorted", message); break;
+          case "dispensing": fire("onDispensing", message); break;
+          default: break;
+        }
+      });
 
-    // A failed connect also fires close, so the retry is handled there.
-    socket.addEventListener("error", () => {});
+      socket.addEventListener("close", () => {
+        if (closed) return;
+        fire("onOffline", null);
+        retry = setTimeout(open, RECONNECT_MS);
+      });
+
+      socket.addEventListener("error", () => {});
+    });
   }
 
   open();

@@ -145,7 +145,19 @@
 
       if (!anyOpen) {
         selectedSku = null;
-        showUnavailable(UNAVAILABLE_MESSAGE);
+        const anyStock = coils.some((item) => item.qty > 0);
+        if (!anyStock) {
+          showUnavailable(UNAVAILABLE_MESSAGE);
+        } else {
+          document.getElementById("pageTitle").textContent = "Keep recycling for a reward";
+          document.getElementById("pageTitle").classList.remove("is-unavailable");
+          document.getElementById("pageSub").textContent =
+            "Nothing in stock matches your points yet. Insert more items, or print your receipt.";
+          button.hidden = true;
+          document.getElementById("kioskInfo").textContent =
+            "Keep recycling for a pricier item, or print your QR receipt and come back later.";
+          error.hidden = true;
+        }
         return;
       }
 

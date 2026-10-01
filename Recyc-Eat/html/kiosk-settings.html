@@ -145,6 +145,16 @@
                   <input class="input" type="number" min="1" id="lowStockAlert" required />
                 </div>
               </div>
+              <div class="setting-row">
+                <div class="setting-copy">
+                  <h3>Hardware URL (matarix.store)</h3>
+                  <p>HTTPS address of the Raspberry Pi kiosk server, from the Cloudflare tunnel. Needed so this website can turn coils and talk to the bin.</p>
+                </div>
+                <div class="setting-control">
+                  <input class="input" type="url" id="hardwareApiUrl" placeholder="https://xxxx.trycloudflare.com" />
+                  <div class="hint">Leave empty if shoppers only use http://192.168.1.8:4000</div>
+                </div>
+              </div>
             </div>
           </section>
 
@@ -235,6 +245,7 @@
       toggles.forEach((id) => {
         document.getElementById(id).checked = Boolean(data[id]);
       });
+      document.getElementById("hardwareApiUrl").value = data.hardwareApiUrl || "";
     }
 
     function readForm() {
@@ -250,6 +261,7 @@
       data.availableRewards = catalog.map((item) => item.name).join("\n");
       data.rewardMealPoints = costs.length ? Math.min(...costs) : 50;
       data.rewardSnackPoints = data.rewardMealPoints;
+      data.hardwareApiUrl = document.getElementById("hardwareApiUrl").value.trim();
       return { data, catalog };
     }
 

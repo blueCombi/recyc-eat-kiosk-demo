@@ -22,6 +22,7 @@ export async function loadKioskSettings() {
   cached = snap.exists()
     ? sanitizeSettings(snap.data())
     : { ...DEFAULT_SETTINGS };
+  rememberHardwareBridge(cached);
   return cached;
 }
 
@@ -35,7 +36,19 @@ export async function saveKioskSettings(raw) {
     updated_at: new Date().toISOString(),
   });
   cached = data;
+  rememberHardwareBridge(data);
   return data;
+}
+
+function rememberHardwareBridge(data) {
+  const url = String(data?.hardwareApiUrl || "").trim().replace(/\/+$/, "");
+  if (!url) return;
+  try {
+    localStorage.setItem("econovaHardwareApi", url);
+    localStorage.setItem("econovaPrintApi", `${url}/api/print`);
+  } catch {
+    /* private mode */
+  }
 }
 
 export function applySettingsToPoints(POINTS, data) {

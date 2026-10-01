@@ -21,8 +21,17 @@ export function getPrintApi() {
 
   const { hostname, port, origin, protocol } = location;
   if (port === PRINT_PORT && protocol.startsWith("http")) return `${origin}/api/print`;
-  if (protocol.startsWith("http") && hostname) {
+  if (protocol.startsWith("http") && (
+    hostname === "localhost" || hostname === "127.0.0.1"
+    || /^(192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/.test(hostname)
+  )) {
     return `http://${hostname}:${PRINT_PORT}/api/print`;
+  }
+  try {
+    const hardware = localStorage.getItem("econovaHardwareApi");
+    if (hardware) return `${hardware.replace(/\/+$/, "")}/api/print`;
+  } catch {
+    /* ignore */
   }
   return `http://127.0.0.1:${PRINT_PORT}/api/print`;
 }
@@ -44,6 +53,13 @@ export async function printReceipt({
   voucherCode,
   redeemUrl,
 }) {
+  try {
+    const { loadKioskSettings } = await import("./kiosk-settings-data.js");
+    await loadKioskSettings();
+  } catch {
+    /* Pi URL not saved yet */
+  }
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), PRINT_TIMEOUT_MS);
 

@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   rewardMealPoints: 50,
   rewardSnackPoints: 30,
   availableRewards: "Instant drink sachet\nBiscuits\nCanned sardines\nCanned tuna",
+  hardwareApiUrl: "",
   kioskOpen: true,
   autoPrint: true,
   sessionTimeout: 90,
@@ -66,6 +67,7 @@ export function sanitizeSettings(raw) {
   next.autoPrint = Boolean(next.autoPrint);
   next.availableRewards = String(next.availableRewards || "").trim()
     || DEFAULT_SETTINGS.availableRewards;
+  next.hardwareApiUrl = String(next.hardwareApiUrl || "").trim().replace(/\/+$/, "");
 
   // The previous official matrix. A saved copy of those exact numbers moves
   // to the current table; any other saved value is an admin edit and stays.
@@ -124,6 +126,16 @@ export function validateSettings(data) {
   }
   if (data.lowStockAlert < 1) {
     return "The low-stock alert must be at least 1.";
+  }
+  if (data.hardwareApiUrl) {
+    try {
+      const url = new URL(data.hardwareApiUrl);
+      if (url.protocol !== "https:") {
+        return "The hardware URL must start with https:// so matarix.store can reach the Pi.";
+      }
+    } catch {
+      return "That hardware URL is not valid.";
+    }
   }
   return null;
 }
