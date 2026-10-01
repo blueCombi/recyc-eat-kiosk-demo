@@ -29,6 +29,21 @@ if [ ! -x "$BIN" ]; then
 fi
 
 echo "Kiosk must already be running on port 4000."
-echo "Paste the https://….trycloudflare.com URL into Kiosk Settings."
+echo "Paste the https://….trycloudflare.com URL into Admin → Kiosk Settings."
 echo
-exec "$BIN" tunnel --url http://127.0.0.1:4000
+
+# Quick tunnels sometimes time out on a Pi 3. Retry a few times, prefer HTTP/2.
+for attempt in 1 2 3; do
+  echo "Starting tunnel (try ${attempt}/3)…"
+  if "$BIN" tunnel --protocol http2 --url http://127.0.0.1:4000; then
+    exit 0
+  fi
+  echo "Tunnel failed. Waiting 8s…"
+  sleep 8
+done
+
+echo
+echo "Cloudflare did not answer. On the Pi run:"
+echo "  curl -I --max-time 20 https://api.trycloudflare.com"
+echo "Until that works, control vending from http://192.168.1.8:4000 only."
+exit 1

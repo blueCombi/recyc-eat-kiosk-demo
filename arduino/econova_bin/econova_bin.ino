@@ -335,8 +335,9 @@ void loop()
     return;
   }
 
-  // MATERIAL DETECTION — the inductive sensor pulls low on metal.
-  const char *material = digitalRead(CAN_SENSOR) == LOW ? "CAN" : "PLASTIC";
+  // MATERIAL DETECTION — many inductive modules sit LOW when idle and go
+  // HIGH on metal. A leftover LOW=can test treated every idle bottle as a can.
+  const char *material = digitalRead(CAN_SENSOR) == HIGH ? "CAN" : "PLASTIC";
 
   // Cans are one class. IR height is only for plastic bottles.
   if (strcmp(material, "CAN") == 0)
